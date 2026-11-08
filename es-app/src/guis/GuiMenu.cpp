@@ -36,7 +36,7 @@ GuiMenu::GuiMenu(Window* window) : GuiComponent(window), mMenu(window, "MAIN MEN
 		addEntry("GAME COLLECTION SETTINGS", 0xBCBEBCFF, true, [this] { openCollectionSystemSettings(); });
 		addEntry("OTHER SETTINGS", 0xBCBEBCFF, true, [this] { openOtherSettings(); });
 		addEntry("WI-FI", 0xBCBEBCFF, true, [this] { GuiWifi::open(mWindow); }); // BTV9
-		addEntry("ATUALIZAR EMULATIONSTATION", 0xBCBEBCFF, true, [this] { checkUpdate(mWindow); }); // BTV9
+		addEntry("PROCURAR ATUALIZAÇÕES", 0xBCBEBCFF, true, [this] { checkUpdate(mWindow); }); // BTV9
 		addEntry("CONFIGURE INPUT", 0xBCBEBCFF, true, [this] { openConfigInput(); });
 	}
 
@@ -367,26 +367,86 @@ void GuiMenu::openQuitMenu()
 	mWindow->pushGui(s);
 }
 
-// BTV9: procura versão nova nos releases do GitHub (/opt/btv9/es-update.sh menu) e,
-// se houver, oferece reiniciar o ES para instalar (a instalação roda antes de o ES iniciar)
+// BTV9: procura atualizações de tudo (/opt/btv9/es-update.sh): o EmulationStation (releases do GitHub)
+// e os pacotes do Debian/Armbian (apt). O kernel, o device tree e o u-boot ficam de fora.
 #define UPDATE_SCRIPT "/opt/btv9/es-update.sh"
+
+static void finishUpdate(Window* window, bool esReady, bool reboot)
+{
+	if(reboot)
+		window->pushGui(new GuiMsgBox(window, "O SISTEMA PRECISA SER REINICIADO PARA CONCLUIR A ATUALIZAÇÃO.\nREINICIAR O APARELHO AGORA?",
+			"SIM", [] { btv9RunRoot(UPDATE_SCRIPT, { "reboot" }); }, "DEPOIS", nullptr));
+	else if(esReady)
+		window->pushGui(new GuiMsgBox(window, "REINICIAR O EMULATIONSTATION AGORA PARA INSTALAR A VERSÃO NOVA?",
+			"SIM", [] { btv9RunRoot(UPDATE_SCRIPT, { "restart" }); }, "DEPOIS", nullptr));
+}
+
+static void installSystem(Window* window, bool esReady)
+{
+	window->pushGui(new GuiBusy(window, "INSTALANDO PACOTES DO SISTEMA",
+		[] { return btv9RunRoot(UPDATE_SCRIPT, { "system" }); },
+		[window, esReady](const std::string& out) {
+			bool ok = out.compare(0, 2, "OK") == 0;
+			bool reboot = out.find("REINICIAR") != std::string::npos;
+			if(!ok)
+				window->pushGui(new GuiMsgBox(window, "NÃO FOI POSSÍVEL ATUALIZAR OS PACOTES DO SISTEMA.", "OK",
+					[window, esReady, reboot] { finishUpdate(window, esReady, reboot); }));
+			else if(!reboot && !esReady)
+				window->pushGui(new GuiMsgBox(window, "PACOTES DO SISTEMA ATUALIZADOS."));
+			else
+				finishUpdate(window, esReady, reboot);
+		}));
+}
+
 void GuiMenu::checkUpdate(Window* window)
 {
-	window->pushGui(new GuiBusy(window, "PROCURANDO ATUALIZAÇÃO",
+	window->pushGui(new GuiBusy(window, "PROCURANDO ATUALIZAÇÕES",
 		[] { return btv9RunRoot(UPDATE_SCRIPT, { "menu" }); },
 		[window](const std::string& out) {
-			// saída: "<ESTADO> <versão>"; ESTADO = PRONTA (baixada), ATUAL ou ERRO
-			std::string state = out.substr(0, out.find(' '));
-			std::string ver = out.find(' ') == std::string::npos ? "" : out.substr(out.find(' ') + 1);
-			ver = Utils::String::toUpper(ver.substr(0, ver.find('\n')));
-			if(state == "PRONTA")
-				window->pushGui(new GuiMsgBox(window, "VERSÃO NOVA BAIXADA: " + ver + "\nREINICIAR O EMULATIONSTATION AGORA PARA INSTALAR?",
-					"SIM", [] { btv9RunRoot(UPDATE_SCRIPT, { "restart" }); },
-					"DEPOIS", nullptr));
-			else if(state == "ATUAL")
-				window->pushGui(new GuiMsgBox(window, "O EMULATIONSTATION JÁ ESTÁ NA VERSÃO MAIS NOVA (" + ver + ")."));
-			else
-				window->pushGui(new GuiMsgBox(window, "NÃO FOI POSSÍVEL PROCURAR ATUALIZAÇÃO.\nVERIFIQUE A CONEXÃO COM A INTERNET."));
+			// linhas "ES PRONTA|ATUAL|ERRO <versão>" e "PACOTES <n>|ERRO"
+			std::string esState = "ERRO", esVer, pkgs = "ERRO";
+			size_t start = 0;
+			while(start < out.size())
+			{
+				size_t end = out.find('\n', start);
+				if(end == std::string::npos)
+					end = out.size();
+				std::string line = out.substr(start, end - start);
+				start = end + 1;
+				if(line.compare(0, 3, "ES ") == 0)
+				{
+					std::string rest = line.substr(3);
+					esState = rest.substr(0, rest.find(' '));
+					esVer = rest.find(' ') == std::string::npos ? "" : Utils::String::toUpper(rest.substr(rest.find(' ') + 1));
+				}
+				else if(line.compare(0, 8, "PACOTES ") == 0)
+					pkgs = line.substr(8);
+			}
+
+			bool esReady = esState == "PRONTA";
+			int nPkgs = pkgs == "ERRO" ? 0 : atoi(pkgs.c_str());
+			std::string esText = esReady ? "EMULATIONSTATION: VERSÃO NOVA " + esVer
+				: esState == "ATUAL" ? "EMULATIONSTATION: EM DIA (" + esVer + ")"
+				: "EMULATIONSTATION: NÃO FOI POSSÍVEL VERIFICAR";
+			std::string pkgText = pkgs == "ERRO" ? "SISTEMA: NÃO FOI POSSÍVEL VERIFICAR"
+				: nPkgs == 0 ? "SISTEMA: EM DIA"
+				: "SISTEMA: " + std::to_string(nPkgs) + (nPkgs == 1 ? " PACOTE A ATUALIZAR" : " PACOTES A ATUALIZAR");
+
+			if(!esReady && nPkgs == 0)
+			{
+				bool failed = esState == "ERRO" || pkgs == "ERRO";
+				window->pushGui(new GuiMsgBox(window, esText + "\n" + pkgText +
+					(failed ? "\nVERIFIQUE A CONEXÃO COM A INTERNET." : "")));
+				return;
+			}
+			window->pushGui(new GuiMsgBox(window, esText + "\n" + pkgText + "\nINSTALAR AGORA?",
+				"SIM", [window, esReady, nPkgs] {
+					if(nPkgs > 0)
+						installSystem(window, esReady);
+					else
+						btv9RunRoot(UPDATE_SCRIPT, { "restart" });
+				},
+				"DEPOIS", nullptr));
 		}));
 }
 

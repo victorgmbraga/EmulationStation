@@ -1,0 +1,70 @@
+# BTV9: compila o EmulationStation para o BTV9 (Amlogic S905X, Debian 13 ARM64).
+# - push no branch btv9: só compila (verificação) e guarda o pacote como artefato
+# - tag btv9-* (ex.: btv9-2026.11.08): compila e publica um release; o aparelho baixa de lá
+name: BTV9
+
+on:
+  push:
+    branches: [btv9]
+    tags: ['btv9-*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    container: debian:trixie
+    steps:
+      - name: Dependências (as mesmas do aparelho)
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential cmake git ca-certificates pkg-config \
+            libsdl2-dev libfreeimage-dev libfreetype-dev libcurl4-openssl-dev \
+            libvlc-dev libvlccore-dev libgles-dev libgles2-mesa-dev libegl-dev libgbm-dev libdrm-dev \
+            rapidjson-dev libasound2-dev libpulse-dev zlib1g-dev
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Compilar
+        run: |
+          mkdir -p build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_MESA_GLES=On -DGLSystem="Embedded OpenGL"
+          make -j"$(nproc)"
+
+      - name: Empacotar
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          [ "$GITHUB_REF_TYPE" = tag ] || VERSION="dev-${GITHUB_SHA::7}"
+          mkdir -p pkg/emulationstation
+          strip -o pkg/emulationstation/emulationstation emulationstation
+          cp -r resources pkg/emulationstation/
+          printf '%s\n%s\n' "$VERSION" "$GITHUB_SHA" > pkg/emulationstation/VERSION
+          # falha se faltar alguma biblioteca
+          if ldd pkg/emulationstation/emulationstation | grep 'not found'; then exit 1; fi
+          tar -C pkg -czf emulationstation-btv9-arm64.tar.gz emulationstation
+          sha256sum emulationstation-btv9-arm64.tar.gz > emulationstation-btv9-arm64.tar.gz.sha256
+          cat emulationstation-btv9-arm64.tar.gz.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: emulationstation-btv9-arm64
+          path: emulationstation-btv9-arm64.tar.gz*
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/btv9-')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: emulationstation-btv9-arm64
+      - name: Publicar release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" emulationstation-btv9-arm64.tar.gz emulationstation-btv9-arm64.tar.gz.sha256 \
+            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes

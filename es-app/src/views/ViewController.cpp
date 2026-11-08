@@ -3,12 +3,9 @@
 #include "animations/Animation.h"
 #include "animations/LambdaAnimation.h"
 #include "animations/LaunchAnimation.h"
-#include "animations/MoveCameraAnimation.h"
 #include "guis/GuiMenu.h"
-#include "views/gamelist/DetailedGameListView.h"
+#include "views/gamelist/BasicGameListView.h"
 #include "views/gamelist/IGameListView.h"
-#include "views/gamelist/GridGameListView.h"
-#include "views/gamelist/VideoGameListView.h"
 #include "views/SystemView.h"
 #include "views/UIModeController.h"
 #include "FileFilterIndex.h"
@@ -164,87 +161,13 @@ void ViewController::playViewTransition()
 	if(target == -mCamera.translation() && !isAnimationPlaying(0))
 		return;
 
-	std::string transition_style = Settings::getInstance()->getString("TransitionStyle");
-	if(transition_style == "fade")
+	// BTV9: transição sempre instantânea
+	setAnimation(new LambdaAnimation(
+		[this, target](float /*t*/)
 	{
-		// fade
-		// stop whatever's currently playing, leaving mFadeOpacity wherever it is
-		cancelAnimation(0);
-
-		auto fadeFunc = [this](float t) {
-			mFadeOpacity = Math::lerp(0, 1, t);
-		};
-
-		const static int FADE_DURATION = 240; // fade in/out time
-		const static int FADE_WAIT = 320; // time to wait between in/out
-		setAnimation(new LambdaAnimation(fadeFunc, FADE_DURATION), 0, [this, fadeFunc, target] {
-			this->mCamera.translation() = -target;
-			updateHelpPrompts();
-			setAnimation(new LambdaAnimation(fadeFunc, FADE_DURATION), FADE_WAIT, nullptr, true);
-		});
-
-		// fast-forward animation if we're partway faded
-		if(target == -mCamera.translation())
-		{
-			// not changing screens, so cancel the first half entirely
-			advanceAnimation(0, FADE_DURATION);
-			advanceAnimation(0, FADE_WAIT);
-			advanceAnimation(0, FADE_DURATION - (int)(mFadeOpacity * FADE_DURATION));
-		}else{
-			advanceAnimation(0, (int)(mFadeOpacity * FADE_DURATION));
-		}
-	}
-	else if (transition_style == "slide")
-	{
-		// slide or simple slide
-		bool inGamelistNav = -mCamera.translation().y() == target.y() // not in/out gamelist nav
-			&& -mCamera.translation().x() - target.x(); // left/right movement
-		cancelAnimation(0);
-		Vector3f tgt = Vector3f(target);
-		Vector3f positionOrig;
-		if (inGamelistNav) {
-			const float screenWidth = (float)Renderer::getScreenWidth();
-			if (-mCamera.translation().x() - tgt.x() >= 2 * screenWidth)
-			{
-				// right rollover
-				mLockInput = true;
-				tgt.x() = screenWidth * mGameListViews.size();
-			}
-			else if (-mCamera.translation().x() - tgt.x() <= 2 * -screenWidth)
-			{
-				// left rollover
-				mLockInput = true;
-				tgt.x() = -screenWidth;
-			}
-			// deny any further input on rollover as mCurrentView would be
-			// different on subsequent animations, resulting in restoring
-			// a unrelated mCurrentView/mCamera with the original position
-			if (mLockInput)
-			{
-				positionOrig = Vector3f(mCurrentView->getPosition());
-				mCurrentView->setPosition(tgt.x(), tgt.y());
-			}
-		}
-
-		setAnimation(new MoveCameraAnimation(mCamera, tgt), 0, [this, positionOrig] {
-			if (mLockInput) {
-				mCurrentView->setPosition(positionOrig);
-				mCamera.translation() = -positionOrig;
-			}
-			mLockInput = false;
-		});
-		updateHelpPrompts(); // update help prompts immediately
-	}
-	else
-	{
-		// instant
-		setAnimation(new LambdaAnimation(
-			[this, target](float /*t*/)
-		{
-			this->mCamera.translation() = -target;
-		}, 1));
-		updateHelpPrompts();
-	}
+		this->mCamera.translation() = -target;
+	}, 1));
+	updateHelpPrompts();
 }
 
 void ViewController::onFileChanged(FileData* file, FileChangeType change)
@@ -274,49 +197,18 @@ void ViewController::launch(FileData* game, Vector3f center)
 	mWindow->stopInfoPopup(); // make sure we disable any existing info popup
 	mLockInput = true;
 
-	std::string transition_style = Settings::getInstance()->getString("TransitionStyle");
-	if(transition_style == "fade")
+	// BTV9: transição sempre instantânea
+	setAnimation(new LaunchAnimation(mCamera, mFadeOpacity, center, 10), 0, [this, origCamera, center, game]
 	{
-		// fade out, launch game, fade back in
-		auto fadeFunc = [this](float t) {
-			mFadeOpacity = Math::lerp(0.0f, 1.0f, t);
-		};
-		setAnimation(new LambdaAnimation(fadeFunc, 800), 0, [this, game, fadeFunc]
-		{
-			game->launchGame(mWindow);
-			setAnimation(new LambdaAnimation(fadeFunc, 800), 0, [this, game] { mLockInput = false; }, true);
-			this->onFileChanged(game, FILE_METADATA_CHANGED);
-			if (mCurrentView) {
-				this->getGameListView(game->getSystem())->setCursor(game, true);
-				mCurrentView->onShow();
-			}
-		});
-	} else if (transition_style == "slide"){
-		// move camera to zoom in on center + fade out, launch game, come back in
-		setAnimation(new LaunchAnimation(mCamera, mFadeOpacity, center, 1500), 0, [this, origCamera, center, game]
-		{
-			game->launchGame(mWindow);
-			mCamera = origCamera;
-			setAnimation(new LaunchAnimation(mCamera, mFadeOpacity, center, 600), 0, [this, game] { mLockInput = false; }, true);
-			this->onFileChanged(game, FILE_METADATA_CHANGED);
-			if (mCurrentView) {
-				this->getGameListView(game->getSystem())->setCursor(game, true);
-				mCurrentView->onShow();
-			}
-		});
-	} else { // instant
-		setAnimation(new LaunchAnimation(mCamera, mFadeOpacity, center, 10), 0, [this, origCamera, center, game]
-		{
-			game->launchGame(mWindow);
-			mCamera = origCamera;
-			setAnimation(new LaunchAnimation(mCamera, mFadeOpacity, center, 10), 0, [this, game] { mLockInput = false; }, true);
-			this->onFileChanged(game, FILE_METADATA_CHANGED);
-			if (mCurrentView) {
-				this->getGameListView(game->getSystem())->setCursor(game, true);
-				mCurrentView->onShow();
-			}
-		});
-	}
+		game->launchGame(mWindow);
+		mCamera = origCamera;
+		setAnimation(new LaunchAnimation(mCamera, mFadeOpacity, center, 10), 0, [this, game] { mLockInput = false; }, true);
+		this->onFileChanged(game, FILE_METADATA_CHANGED);
+		if (mCurrentView) {
+			this->getGameListView(game->getSystem())->setCursor(game, true);
+			mCurrentView->onShow();
+		}
+	});
 }
 
 void ViewController::removeGameListView(SystemData* system)
@@ -330,24 +222,6 @@ void ViewController::removeGameListView(SystemData* system)
 	}
 }
 
-ViewController::GameListViewType ViewController::getGameListViewType()
-{
-	//decide type
-	GameListViewType selectedViewType = AUTOMATIC;
-
-	std::string viewPreference = Settings::getInstance()->getString("GamelistViewStyle");
-	if (viewPreference.compare("basic") == 0)
-		selectedViewType = BASIC;
-	if (viewPreference.compare("detailed") == 0)
-		selectedViewType = DETAILED;
-	if (viewPreference.compare("grid") == 0)
-		selectedViewType = GRID;
-	if (viewPreference.compare("video") == 0)
-		selectedViewType = VIDEO;
-
-	return selectedViewType;
-}
-
 std::shared_ptr<IGameListView> ViewController::getGameListView(SystemData* system)
 {
 	//if we already made one, return that one
@@ -359,46 +233,8 @@ std::shared_ptr<IGameListView> ViewController::getGameListView(SystemData* syste
 	//if we didn't, make it, remember it, and return it
 	std::shared_ptr<IGameListView> view;
 
-	bool themeHasVideoView = system->getTheme()->hasView("video");
-
-	//decide type
-	GameListViewType selectedViewType = getGameListViewType();
-
-	if (selectedViewType == AUTOMATIC)
-	{
-		std::vector<FileData*> files = system->getRootFolder()->getFilesRecursive(GAME | FOLDER);
-		for (auto it = files.cbegin(); it != files.cend(); it++)
-		{
-			if (themeHasVideoView && !(*it)->getVideoPath().empty())
-			{
-				selectedViewType = VIDEO;
-				break;
-			}
-			else if (!(*it)->getThumbnailPath().empty())
-			{
-				selectedViewType = DETAILED;
-				// Don't break out in case any subsequent files have video
-			}
-		}
-	}
-
-	// Create the view
-	switch (selectedViewType)
-	{
-		case VIDEO:
-			view = std::shared_ptr<IGameListView>(new VideoGameListView(mWindow, system->getRootFolder()));
-			break;
-		case DETAILED:
-			view = std::shared_ptr<IGameListView>(new DetailedGameListView(mWindow, system->getRootFolder()));
-			break;
-		case GRID:
-			view = std::shared_ptr<IGameListView>(new GridGameListView(mWindow, system->getRootFolder()));
-			break;
-		case BASIC:
-		default:
-			view = std::shared_ptr<IGameListView>(new BasicGameListView(mWindow, system->getRootFolder()));
-			break;
-	}
+	// BTV9: só existe a lista básica (sem imagens nem vídeos)
+	view = std::shared_ptr<IGameListView>(new BasicGameListView(mWindow, system->getRootFolder()));
 
 	view->setTheme(system->getTheme());
 

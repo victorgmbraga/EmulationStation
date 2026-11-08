@@ -665,7 +665,8 @@ std::map<std::string, ThemeSet> ThemeData::getThemeSets()
 
 		for(Utils::FileSystem::stringList::const_iterator it = dirContent.cbegin(); it != dirContent.cend(); ++it)
 		{
-			if(Utils::FileSystem::isDirectory(*it))
+			// BTV9: só o tema minui é usado
+			if(Utils::FileSystem::isDirectory(*it) && Utils::FileSystem::getFileName(*it) == "minui")
 			{
 				ThemeSet set = {*it};
 				sets[set.getName()] = set;

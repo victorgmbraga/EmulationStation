@@ -56,17 +56,6 @@ public:
 		GAME_LIST
 	};
 
-	enum GameListViewType
-	{
-		AUTOMATIC,
-		BASIC,
-		DETAILED,
-		GRID,
-		VIDEO
-	};
-
-	ViewController::GameListViewType getGameListViewType();
-
 	struct State
 	{
 		ViewMode viewing;

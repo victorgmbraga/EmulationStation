@@ -214,80 +214,6 @@ void GuiMenu::openUISettings()
 		Settings::getInstance()->setBool("MoveCarousel", move_carousel->getState());
 	});
 
-	// transition style
-	auto transition_style = std::make_shared< OptionListComponent<std::string> >(mWindow, "TRANSITION STYLE", false);
-	std::vector<std::string> transitions;
-	transitions.push_back("fade");
-	transitions.push_back("slide");
-	transitions.push_back("instant");
-	for(auto it = transitions.cbegin(); it != transitions.cend(); it++)
-		transition_style->add(*it, *it, Settings::getInstance()->getString("TransitionStyle") == *it);
-	s->addWithLabel("TRANSITION STYLE", transition_style);
-	s->addSaveFunc([transition_style] {
-		if (Settings::getInstance()->getString("TransitionStyle") == "instant"
-			&& transition_style->getSelected() != "instant"
-			&& PowerSaver::getMode() == PowerSaver::INSTANT)
-		{
-			Settings::getInstance()->setString("PowerSaverMode", "default");
-			PowerSaver::init();
-		}
-		Settings::getInstance()->setString("TransitionStyle", transition_style->getSelected());
-	});
-
-	// theme set
-	auto themeSets = ThemeData::getThemeSets();
-
-	if(!themeSets.empty())
-	{
-		std::map<std::string, ThemeSet>::const_iterator selectedSet = themeSets.find(Settings::getInstance()->getString("ThemeSet"));
-		if(selectedSet == themeSets.cend())
-			selectedSet = themeSets.cbegin();
-
-		auto theme_set = std::make_shared< OptionListComponent<std::string> >(mWindow, "THEME SET", false);
-		for(auto it = themeSets.cbegin(); it != themeSets.cend(); it++)
-			theme_set->add(it->first, it->first, it == selectedSet);
-		s->addWithLabel("THEME SET", theme_set);
-
-		Window* window = mWindow;
-		s->addSaveFunc([window, theme_set]
-		{
-			bool needReload = false;
-			std::string oldTheme = Settings::getInstance()->getString("ThemeSet");
-			if(oldTheme != theme_set->getSelected())
-				needReload = true;
-
-			Settings::getInstance()->setString("ThemeSet", theme_set->getSelected());
-
-			if(needReload)
-			{
-				Scripting::fireEvent("theme-changed", theme_set->getSelected(), oldTheme);
-				CollectionSystemManager::get()->updateSystemsList();
-				ViewController::get()->reloadAll(true); // TODO - replace this with some sort of signal-based implementation
-			}
-		});
-	}
-
-	// GameList view style
-	auto gamelist_style = std::make_shared< OptionListComponent<std::string> >(mWindow, "GAMELIST VIEW STYLE", false);
-	std::vector<std::string> styles;
-	styles.push_back("automatic");
-	styles.push_back("basic");
-	styles.push_back("detailed");
-	styles.push_back("video");
-	styles.push_back("grid");
-
-	for (auto it = styles.cbegin(); it != styles.cend(); it++)
-		gamelist_style->add(*it, *it, Settings::getInstance()->getString("GamelistViewStyle") == *it);
-	s->addWithLabel("GAMELIST VIEW STYLE", gamelist_style);
-	s->addSaveFunc([gamelist_style] {
-		bool needReload = false;
-		if (Settings::getInstance()->getString("GamelistViewStyle") != gamelist_style->getSelected())
-			needReload = true;
-		Settings::getInstance()->setString("GamelistViewStyle", gamelist_style->getSelected());
-		if (needReload)
-			ViewController::get()->reloadAll();
-	});
-
 	// Optionally ignore leading articles when sorting game titles
 	auto ignore_articles = std::make_shared<SwitchComponent>(mWindow);
 	ignore_articles->setState(Settings::getInstance()->getBool("IgnoreLeadingArticles"));
@@ -385,7 +311,6 @@ void GuiMenu::openOtherSettings()
 	s->addWithLabel("POWER SAVER MODES", power_saver);
 	s->addSaveFunc([this, power_saver] {
 		if (Settings::getInstance()->getString("PowerSaverMode") != "instant" && power_saver->getSelected() == "instant") {
-			Settings::getInstance()->setString("TransitionStyle", "instant");
 			Settings::getInstance()->setBool("MoveCarousel", false);
 			Settings::getInstance()->setBool("EnableSounds", false);
 		}

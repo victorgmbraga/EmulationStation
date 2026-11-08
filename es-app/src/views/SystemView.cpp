@@ -228,8 +228,7 @@ void SystemView::onCursorChanged(const CursorState& /*state*/)
 	cancelAnimation(1);
 	cancelAnimation(2);
 
-	std::string transition_style = Settings::getInstance()->getString("TransitionStyle");
-	bool goFast = transition_style == "instant";
+	const bool goFast = true; // BTV9: transição sempre instantânea
 	const float infoStartOpacity = mSystemInfo.getOpacity() / 255.f;
 
 	Animation* infoFadeOut = new LambdaAnimation(
@@ -267,65 +266,20 @@ void SystemView::onCursorChanged(const CursorState& /*state*/)
 
 	Animation* anim;
 	bool move_carousel = Settings::getInstance()->getBool("MoveCarousel");
-	if(transition_style == "fade")
+	// BTV9: transição sempre instantânea
+	anim = new LambdaAnimation(
+		[this, startPos, endPos, posMax, move_carousel ](float t)
 	{
-		float startExtrasFade = mExtrasFadeOpacity;
-		anim = new LambdaAnimation(
-			[this, startExtrasFade, startPos, endPos, posMax, move_carousel](float t)
-		{
-			t -= 1;
-			float f = Math::lerp(startPos, endPos, t*t*t + 1);
-			if(f < 0)
-				f += posMax;
-			if(f >= posMax)
-				f -= posMax;
+		t -= 1;
+		float f = Math::lerp(startPos, endPos, t*t*t + 1);
+		if(f < 0)
+			f += posMax;
+		if(f >= posMax)
+			f -= posMax;
 
-			this->mCamOffset = move_carousel ? f : endPos;
-
-			t += 1;
-			if(t < 0.3f)
-				this->mExtrasFadeOpacity = Math::lerp(0.0f, 1.0f, t / 0.3f + startExtrasFade);
-			else if(t < 0.7f)
-				this->mExtrasFadeOpacity = 1.0f;
-			else
-				this->mExtrasFadeOpacity = Math::lerp(1.0f, 0.0f, (t - 0.7f) / 0.3f);
-
-			if(t > 0.5f)
-				this->mExtrasCamOffset = endPos;
-
-		}, 500);
-	} else if (transition_style == "slide") {
-		// slide
-		anim = new LambdaAnimation(
-			[this, startPos, endPos, posMax, move_carousel](float t)
-		{
-			t -= 1;
-			float f = Math::lerp(startPos, endPos, t*t*t + 1);
-			if(f < 0)
-				f += posMax;
-			if(f >= posMax)
-				f -= posMax;
-
-			this->mCamOffset = move_carousel ? f : endPos;
-			this->mExtrasCamOffset = f;
-		}, 500);
-	} else {
-		// instant
-		anim = new LambdaAnimation(
-			[this, startPos, endPos, posMax, move_carousel ](float t)
-		{
-			t -= 1;
-			float f = Math::lerp(startPos, endPos, t*t*t + 1);
-			if(f < 0)
-				f += posMax;
-			if(f >= posMax)
-				f -= posMax;
-
-			this->mCamOffset = move_carousel ? f : endPos;
-			this->mExtrasCamOffset = endPos;
-		}, move_carousel ? 500 : 1);
-	}
-
+		this->mCamOffset = move_carousel ? f : endPos;
+		this->mExtrasCamOffset = endPos;
+	}, move_carousel ? 500 : 1);
 
 	setAnimation(anim, 0, nullptr, false, 0);
 }

@@ -98,11 +98,11 @@ void Settings::setDefaults()
 		mIntMap["MaxVRAM"] = 100;
 	#endif
 
-	mStringMap["TransitionStyle"] = "fade";
-	mStringMap["ThemeSet"] = "";
+	mStringMap["TransitionStyle"] = "instant";
+	mStringMap["ThemeSet"] = "minui";
 	mStringMap["ScreenSaverBehavior"] = "dim";
 	mStringMap["Scraper"] = "TheGamesDB";
-	mStringMap["GamelistViewStyle"] = "automatic";
+	mStringMap["GamelistViewStyle"] = "basic";
 	mStringMap["SaveGamelistsMode"] = "on exit";
 
 	mBoolMap["ScreenSaverControls"] = true;

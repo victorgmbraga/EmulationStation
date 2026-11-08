@@ -1,4 +1,5 @@
 #include "components/ButtonComponent.h"
+#include "utils/PtBr.h"
 
 #include "resources/Font.h"
 #include "utils/StringUtil.h"
@@ -42,7 +43,7 @@ void ButtonComponent::setText(const std::string& text, const std::string& helpTe
 	mText = Utils::String::toUpper(text);
 	mHelpText = helpText;
 
-	mTextCache = std::unique_ptr<TextCache>(mFont->buildTextCache(mText, 0, 0, getCurTextColor()));
+	mTextCache = std::unique_ptr<TextCache>(mFont->buildTextCache(Utils::PtBr::tr(mText), 0, 0, getCurTextColor())); // BTV9 pt-BR
 
 	float minWidth = mFont->sizeText("DELETE").x() + 12;
 	setSize(Math::max(mTextCache->metrics.size.x() + 12, minWidth), mTextCache->metrics.size.y());

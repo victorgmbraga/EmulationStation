@@ -1,4 +1,5 @@
 #include "components/TextComponent.h"
+#include "utils/PtBr.h"
 
 #include "utils/StringUtil.h"
 #include "Log.h"
@@ -161,7 +162,7 @@ void TextComponent::render(const Transform4x4f& parentTrans)
 
 std::string TextComponent::calculateExtent(bool allow_wrapping)
 {
-	std::string text = mUppercase ? Utils::String::toUpper(mText) : mText;
+	std::string text = Utils::PtBr::tr(mUppercase ? Utils::String::toUpper(mText) : mText); // BTV9 pt-BR
 	if(mAutoCalcExtent.x())
 	{
 		mSize = mFont->sizeText(text, mLineSpacing);

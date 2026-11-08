@@ -409,7 +409,7 @@ namespace Renderer
 		GL_CHECK_ERROR(glVertexAttribPointer(colAttrib, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(Vertex), (const void*)offsetof(Vertex, col)));
 
 		GL_CHECK_ERROR(glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * _numVertices, _vertices, GL_DYNAMIC_DRAW));
-		GL_CHECK_ERROR(glBlendFunc(convertBlendFactor(_srcBlendFactor), convertBlendFactor(_dstBlendFactor)));
+		GL_CHECK_ERROR(glBlendFuncSeparate(convertBlendFactor(_srcBlendFactor), convertBlendFactor(_dstBlendFactor), GL_ZERO, GL_ONE)); // BTV9: preserva alfa=1 no framebuffer (evita fantasma no OSD do Amlogic)
 
 		GL_CHECK_ERROR(glDrawArrays(GL_LINES, 0, _numVertices));
 
@@ -424,7 +424,7 @@ namespace Renderer
 		GL_CHECK_ERROR(glVertexAttribPointer(colAttrib, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(Vertex), (const void*)offsetof(Vertex, col)));
 
 		GL_CHECK_ERROR(glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * _numVertices, _vertices, GL_DYNAMIC_DRAW));
-		GL_CHECK_ERROR(glBlendFunc(convertBlendFactor(_srcBlendFactor), convertBlendFactor(_dstBlendFactor)));
+		GL_CHECK_ERROR(glBlendFuncSeparate(convertBlendFactor(_srcBlendFactor), convertBlendFactor(_dstBlendFactor), GL_ZERO, GL_ONE)); // BTV9: preserva alfa=1 no framebuffer (evita fantasma no OSD do Amlogic)
 
 		GL_CHECK_ERROR(glDrawArrays(GL_TRIANGLE_STRIP, 0, _numVertices));
 

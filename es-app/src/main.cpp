@@ -17,6 +17,7 @@
 #include "Settings.h"
 #include "SystemData.h"
 #include "SystemScreenSaver.h"
+#include "VolumeControl.h"
 #include <SDL_events.h>
 #include <SDL_main.h>
 #include <SDL_timer.h>
@@ -356,6 +357,9 @@ int main(int argc, char* argv[])
 		LOG(LogError) << "Window failed to initialize!";
 		return 1;
 	}
+
+	// BTV9: volume do sistema sempre em 100% (não há mais ajuste no menu)
+	VolumeControl::getInstance()->setVolume(100);
 
 	if (splashScreen)
 	{

@@ -108,6 +108,7 @@ inline const std::string& tr(const std::string& text)
 		{"SHUTDOWN SYSTEM", "DESLIGAR O APARELHO"},
 		// Proteção de tela
 		{"SCREENSAVER AFTER", "PROTEÇÃO DE TELA APÓS"},
+		{"DIM SCREEN AFTER", "ESCURECER A TELA APÓS"},
 		{"SCREENSAVER BEHAVIOR", "TIPO DE PROTEÇÃO DE TELA"},
 		{"SCREENSAVER CONTROLS", "CONTROLES NA PROTEÇÃO DE TELA"},
 		{"DIM", "ESCURECER"},

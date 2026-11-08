@@ -26,14 +26,12 @@ GuiMenu::GuiMenu(Window* window) : GuiComponent(window), mMenu(window, "MAIN MEN
 {
 	bool isFullUI = UIModeController::getInstance()->isUIModeFull();
 
+	// BTV9: sem menu de som (volume 100%, Master, sem sons de navegação — ver Settings::applyFixed)
 	if (isFullUI) {
-		addEntry("SOUND SETTINGS", 0xBCBEBCFF, true, [this] { openSoundSettings(); });
 		addEntry("UI SETTINGS", 0xBCBEBCFF, true, [this] { openUISettings(); });
 		addEntry("GAME COLLECTION SETTINGS", 0xBCBEBCFF, true, [this] { openCollectionSystemSettings(); });
 		addEntry("OTHER SETTINGS", 0xBCBEBCFF, true, [this] { openOtherSettings(); });
 		addEntry("CONFIGURE INPUT", 0xBCBEBCFF, true, [this] { openConfigInput(); });
-	} else {
-		addEntry("SOUND SETTINGS", 0xBCBEBCFF, true, [this] { openSoundSettings(); });
 	}
 
 	addEntry("QUIT", 0xBCBEBCFF, true, [this] {openQuitMenu(); });
@@ -129,60 +127,19 @@ void GuiMenu::openUISettings()
 {
 	auto s = new GuiSettings(mWindow, "UI SETTINGS");
 
-	//UI mode
-	auto UImodeSelection = std::make_shared< OptionListComponent<std::string> >(mWindow, "UI MODE", false);
-	std::vector<std::string> UImodes = UIModeController::getInstance()->getUIModes();
-	for (auto it = UImodes.cbegin(); it != UImodes.cend(); it++)
-		UImodeSelection->add(*it, *it, Settings::getInstance()->getString("UIMode") == *it);
-	s->addWithLabel("UI MODE", UImodeSelection);
+	// BTV9: modo de interface sempre "Full"
 	Window* window = mWindow;
-	s->addSaveFunc([ UImodeSelection, window]
-	{
-		std::string selectedMode = UImodeSelection->getSelected();
-		if (selectedMode != "Full")
-		{
-			std::string msg = "You are changing the UI to a restricted mode:\n" + selectedMode + "\n";
-			msg += "This will hide most menu-options to prevent changes to the system.\n";
-			msg += "To unlock and return to the full UI, enter this code: \n";
-			msg += "\"" + UIModeController::getInstance()->getFormattedPassKeyStr() + "\"\n\n";
-			msg += "Do you want to proceed?";
-			window->pushGui(new GuiMsgBox(window, msg,
-				"YES", [selectedMode] {
-					LOG(LogDebug) << "Setting UI mode to " << selectedMode;
-					Settings::getInstance()->setString("UIMode", selectedMode);
-					Settings::getInstance()->saveFile();
-			}, "NO",nullptr));
-		}
+
+	// BTV9: proteção de tela é sempre "escurecer"; só o tempo é ajustável (0 = nunca)
+	auto screensaver_time = std::make_shared<SliderComponent>(mWindow, 0.f, 30.f, 1.f, "m");
+	screensaver_time->setValue((float)(Settings::getInstance()->getInt("ScreenSaverTime") / Settings::ONE_MINUTE_IN_MS));
+	s->addWithLabel("DIM SCREEN AFTER", screensaver_time);
+	s->addSaveFunc([screensaver_time] {
+		Settings::getInstance()->setInt("ScreenSaverTime", (int)Math::round(screensaver_time->getValue()) * Settings::ONE_MINUTE_IN_MS);
+		PowerSaver::updateTimeouts();
 	});
 
-	// screensaver
-	ComponentListRow screensaver_row;
-	screensaver_row.elements.clear();
-	screensaver_row.addElement(std::make_shared<TextComponent>(mWindow, "SCREENSAVER SETTINGS", Font::get(FONT_SIZE_MEDIUM), 0xBCBEBCFF), true);
-	screensaver_row.addElement(makeArrow(mWindow), false);
-	screensaver_row.makeAcceptInputHandler(std::bind(&GuiMenu::openScreensaverOptions, this));
-	s->addRow(screensaver_row);
-
-	// quick system select (left/right in game list view)
-	auto quick_sys_select = std::make_shared<SwitchComponent>(mWindow);
-	quick_sys_select->setState(Settings::getInstance()->getBool("QuickSystemSelect"));
-	s->addWithLabel("QUICK SYSTEM SELECT", quick_sys_select);
-	s->addSaveFunc([quick_sys_select] { Settings::getInstance()->setBool("QuickSystemSelect", quick_sys_select->getState()); });
-
-	// carousel transition option
-	auto move_carousel = std::make_shared<SwitchComponent>(mWindow);
-	move_carousel->setState(Settings::getInstance()->getBool("MoveCarousel"));
-	s->addWithLabel("CAROUSEL TRANSITIONS", move_carousel);
-	s->addSaveFunc([move_carousel] {
-		if (move_carousel->getState()
-			&& !Settings::getInstance()->getBool("MoveCarousel")
-			&& PowerSaver::getMode() == PowerSaver::INSTANT)
-		{
-			Settings::getInstance()->setString("PowerSaverMode", "default");
-			PowerSaver::init();
-		}
-		Settings::getInstance()->setBool("MoveCarousel", move_carousel->getState());
-	});
+	// BTV9: "troca rápida de sistema" e "transições do carrossel" sempre desligadas
 
 	// Optionally ignore leading articles when sorting game titles
 	auto ignore_articles = std::make_shared<SwitchComponent>(mWindow);
@@ -233,11 +190,7 @@ void GuiMenu::openUISettings()
 		Settings::getInstance()->setString("StartupSystem", systemfocus_list->getSelected());
 	});
 
-	// show help
-	auto show_help = std::make_shared<SwitchComponent>(mWindow);
-	show_help->setState(Settings::getInstance()->getBool("ShowHelpPrompts"));
-	s->addWithLabel("ON-SCREEN HELP", show_help);
-	s->addSaveFunc([show_help] { Settings::getInstance()->setBool("ShowHelpPrompts", show_help->getState()); });
+	// BTV9: ajuda na tela sempre ligada
 
 	// enable filters (ForceDisableFilters)
 	auto enable_filter = std::make_shared<SwitchComponent>(mWindow);
@@ -249,11 +202,7 @@ void GuiMenu::openUISettings()
 		if (enable_filter->getState() != filter_is_enabled) ViewController::get()->ReloadAndGoToStart();
 	});
 
-	// hide start menu in Kid Mode
-	auto disable_start = std::make_shared<SwitchComponent>(mWindow);
-	disable_start->setState(Settings::getInstance()->getBool("DisableKidStartMenu"));
-	s->addWithLabel("DISABLE START MENU IN KID MODE", disable_start);
-	s->addSaveFunc([disable_start] { Settings::getInstance()->setBool("DisableKidStartMenu", disable_start->getState()); });
+	// BTV9: sem modo infantil, a opção do menu Start nesse modo não se aplica
 
 	mWindow->pushGui(s);
 
@@ -269,26 +218,9 @@ void GuiMenu::openOtherSettings()
 	s->addWithLabel("VRAM LIMIT", max_vram);
 	s->addSaveFunc([max_vram] { Settings::getInstance()->setInt("MaxVRAM", (int)Math::round(max_vram->getValue())); });
 
-	// power saver
-	auto power_saver = std::make_shared< OptionListComponent<std::string> >(mWindow, "POWER SAVER MODES", false);
-	std::vector<std::string> modes;
-	modes.push_back("disabled");
-	modes.push_back("default");
-	modes.push_back("enhanced");
-	modes.push_back("instant");
-	for (auto it = modes.cbegin(); it != modes.cend(); it++)
-		power_saver->add(*it, *it, Settings::getInstance()->getString("PowerSaverMode") == *it);
-	s->addWithLabel("POWER SAVER MODES", power_saver);
-	s->addSaveFunc([this, power_saver] {
-		if (Settings::getInstance()->getString("PowerSaverMode") != "instant" && power_saver->getSelected() == "instant") {
-			Settings::getInstance()->setBool("MoveCarousel", false);
-			Settings::getInstance()->setBool("EnableSounds", false);
-		}
-		Settings::getInstance()->setString("PowerSaverMode", power_saver->getSelected());
-		PowerSaver::init();
-	});
+	// BTV9: modo de economia de energia sempre desligado
 
-	// gamelists
+	// gamelist saving
 	auto gamelistsSaveMode = std::make_shared< OptionListComponent<std::string> >(mWindow, "SAVE METADATA", false);
 	std::vector<std::string> saveModes;
 	saveModes.push_back("on exit");

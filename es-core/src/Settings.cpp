@@ -191,6 +191,8 @@ void Settings::setDefaults()
 	//No spaces!  Order is important!
 	//"The A Squad" given [a,an,the] will sort as "A Squad", but given [the,a,an] will sort as "Squad"
 	mStringMap["LeadingArticles"] = "a,an,the";
+
+	applyFixed();
 }
 
 template <typename K, typename V>
@@ -289,6 +291,22 @@ void Settings::loadFile()
 	}
 
 	processBackwardCompatibility();
+	applyFixed();
+}
+
+// BTV9: estas opções não aparecem mais nos menus e valem sempre, mesmo se o es_settings.cfg disser outra coisa
+void Settings::applyFixed()
+{
+	mStringMap["UIMode"]              = "Full";
+	mStringMap["ScreenSaverBehavior"] = "dim";
+	mIntMap["SystemSleepTime"]        = 0;
+	mBoolMap["MoveCarousel"]          = false;
+	mBoolMap["QuickSystemSelect"]     = false;
+	mBoolMap["ShowHelpPrompts"]       = true;
+	mStringMap["PowerSaverMode"]      = "disabled";
+	mStringMap["AudioCard"]           = "default";
+	mStringMap["AudioDevice"]         = "Master";
+	mBoolMap["EnableSounds"]          = false;
 }
 
 

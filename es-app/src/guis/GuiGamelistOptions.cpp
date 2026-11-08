@@ -1,7 +1,6 @@
 #include "GuiGamelistOptions.h"
 
 #include "guis/GuiGamelistFilter.h"
-#include "scrapers/Scraper.h"
 #include "views/gamelist/IGameListView.h"
 #include "views/UIModeController.h"
 #include "views/ViewController.h"
@@ -216,10 +215,6 @@ void GuiGamelistOptions::openMetaDataEd()
 	// open metadata editor
 	// get the FileData that hosts the original metadata
 	FileData* file = getGamelist()->getCursor()->getSourceFileData();
-	ScraperSearchParams p;
-	p.game = file;
-	p.system = file->getSystem();
-
 	std::function<void()> saveBtnFunc;
 	saveBtnFunc = [this, file] {
 		ViewController::get()->getGameListView(mSystem)->setCursor(file, true);
@@ -240,7 +235,7 @@ void GuiGamelistOptions::openMetaDataEd()
 		};
 	}
 
-	mWindow->pushGui(new GuiMetaDataEd(mWindow, &file->metadata, file->metadata.getMDD(), p, Utils::FileSystem::getFileName(file->getPath()), saveBtnFunc, deleteBtnFunc));
+	mWindow->pushGui(new GuiMetaDataEd(mWindow, &file->metadata, file->metadata.getMDD(), file, Utils::FileSystem::getFileName(file->getPath()), saveBtnFunc, deleteBtnFunc));
 }
 
 void GuiGamelistOptions::jumpToLetter()

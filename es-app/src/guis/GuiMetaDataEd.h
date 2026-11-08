@@ -4,18 +4,19 @@
 
 #include "components/ComponentGrid.h"
 #include "components/NinePatchComponent.h"
-#include "scrapers/Scraper.h"
 #include "GuiComponent.h"
 #include "MetaData.h"
 
 
 class ComponentList;
+class FileData;
+class SystemData;
 class TextComponent;
 
 class GuiMetaDataEd : public GuiComponent
 {
 public:
-	GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector<MetaDataDecl>& mdd, ScraperSearchParams params,
+	GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector<MetaDataDecl>& mdd, FileData* game,
 		const std::string& header, std::function<void()> savedCallback, std::function<void()> deleteFunc);
 
 	bool input(InputConfig* config, Input input) override;
@@ -24,8 +25,6 @@ public:
 
 private:
 	void save();
-	void fetch();
-	void fetchDone(const ScraperSearchResult& result);
 	void close(bool closeAllWindows);
 	bool hasChanges();
 	float to_float(const std::string& str, bool& ok);
@@ -39,7 +38,8 @@ private:
 	std::shared_ptr<ComponentList> mList;
 	std::shared_ptr<ComponentGrid> mButtons;
 
-	ScraperSearchParams mScraperParams;
+	FileData* mGame;
+	SystemData* mSystem;
 
 	std::vector< std::shared_ptr<GuiComponent> > mEditors;
 

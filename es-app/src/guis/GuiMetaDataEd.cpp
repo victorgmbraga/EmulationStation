@@ -9,7 +9,6 @@
 #include "components/RatingComponent.h"
 #include "components/SwitchComponent.h"
 #include "components/TextComponent.h"
-#include "guis/GuiGameScraper.h"
 #include "guis/GuiMsgBox.h"
 #include "guis/GuiTextEditPopup.h"
 #include "resources/Font.h"
@@ -22,9 +21,10 @@
 #include "Window.h"
 #include "Log.h"
 
-GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector<MetaDataDecl>& mdd, ScraperSearchParams scraperParams,
+GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector<MetaDataDecl>& mdd, FileData* game,
 	const std::string& /*header*/, std::function<void()> saveCallback, std::function<void()> deleteFunc) : GuiComponent(window),
-	mScraperParams(scraperParams),
+	mGame(game),
+	mSystem(game->getSystem()),
 
 	mBackground(window, ":/frame.png"),
 	mGrid(window, Vector2i(1, 3)),
@@ -41,7 +41,7 @@ GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector
 
 	mTitle = std::make_shared<TextComponent>(mWindow, "EDIT METADATA", Font::get(FONT_SIZE_LARGE), 0x555555FF, ALIGN_CENTER);
 	std::string tgt = md->getType() == GAME_METADATA ? "GAME" : "FOLDER";
-	std::string subt = tgt + ": " + Utils::String::toUpper(Utils::FileSystem::getFileName(scraperParams.game->getPath()));
+	std::string subt = tgt + ": " + Utils::String::toUpper(Utils::FileSystem::getFileName(game->getPath()));
 	mSubtitle = std::make_shared<TextComponent>(mWindow, subt, Font::get(FONT_SIZE_SMALL), 0x777777FF, ALIGN_CENTER);
 	mHeaderGrid->setEntry(mTitle, Vector2i(0, 1), false, true);
 	mHeaderGrid->setEntry(mSubtitle, Vector2i(0, 3), false, true);
@@ -150,9 +150,6 @@ GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector
 
 	std::vector< std::shared_ptr<ButtonComponent> > buttons;
 
-	if(md->getType() == GAME_METADATA && !scraperParams.system->hasPlatformId(PlatformIds::PLATFORM_IGNORE))
-		buttons.push_back(std::make_shared<ButtonComponent>(mWindow, "SCRAPE", "scrape", std::bind(&GuiMetaDataEd::fetch, this)));
-
 	buttons.push_back(std::make_shared<ButtonComponent>(mWindow, "SAVE", "save", [&] { save(); delete this; }));
 	buttons.push_back(std::make_shared<ButtonComponent>(mWindow, "CANCEL", "cancel", [&] { delete this; }));
 
@@ -193,7 +190,7 @@ void GuiMetaDataEd::onSizeChanged()
 void GuiMetaDataEd::save()
 {
 	// remove game from index
-	mScraperParams.system->getIndex()->removeFromIndex(mScraperParams.game);
+	mSystem->getIndex()->removeFromIndex(mGame);
 
 	assert(mMetaDataDecl.size() >= mEditors.size());
 	// there may be less editfields than metadata entries as
@@ -209,35 +206,15 @@ void GuiMetaDataEd::save()
 	}
 
 	// enter game in index
-	mScraperParams.system->getIndex()->addToIndex(mScraperParams.game);
+	mSystem->getIndex()->addToIndex(mGame);
 
 	if(mSavedCallback)
 		mSavedCallback();
 
 	// update respective Collection Entries
-	CollectionSystemManager::get()->refreshCollectionSystems(mScraperParams.game);
+	CollectionSystemManager::get()->refreshCollectionSystems(mGame);
 
-	mScraperParams.system->onMetaDataSavePoint();
-}
-
-void GuiMetaDataEd::fetch()
-{
-	GuiGameScraper* scr = new GuiGameScraper(mWindow, mScraperParams, std::bind(&GuiMetaDataEd::fetchDone, this, std::placeholders::_1));
-	mWindow->pushGui(scr);
-}
-
-void GuiMetaDataEd::fetchDone(const ScraperSearchResult& result)
-{
-	assert(mMetaDataDecl.size() >= mEditors.size());
-	int edIdx = 0;
-	for(auto &mdd : mMetaDataDecl)
-	{
-		if(mdd.isStatistic)
-			continue;
-
-		mEditors.at(edIdx)->setValue(result.mdl.get(mdd.key));
-		edIdx++;
-	}
+	mSystem->onMetaDataSavePoint();
 }
 
 void GuiMetaDataEd::close(bool closeAllWindows)

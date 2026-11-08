@@ -18,8 +18,9 @@ class TextCache;
 #define FONT_SIZE_MEDIUM ((unsigned int)(0.045f * Math::min((int)Renderer::getScreenHeight(), (int)Renderer::getScreenWidth())))
 #define FONT_SIZE_LARGE ((unsigned int)(0.085f * Math::min((int)Renderer::getScreenHeight(), (int)Renderer::getScreenWidth())))
 
-#define FONT_PATH_LIGHT ":/opensans_hebrew_condensed_light.ttf"
-#define FONT_PATH_REGULAR ":/opensans_hebrew_condensed_regular.ttf"
+// BTV9: fonte retrô (Press Start 2P, SIL OFL 1.1 — ver resources/PressStart2P-OFL.txt)
+#define FONT_PATH_LIGHT ":/PressStart2P-Regular.ttf"
+#define FONT_PATH_REGULAR ":/PressStart2P-Regular.ttf"
 
 enum Alignment
 {

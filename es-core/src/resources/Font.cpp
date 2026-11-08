@@ -11,6 +11,17 @@
 
 FT_Library Font::sLibrary = NULL;
 
+// BTV9: no modo pixel, glifos sem suavização (cada pixel ligado ou desligado)
+static void hardenGlyph(FT_GlyphSlot g)
+{
+	if(!Renderer::isPixelMode() || !g->bitmap.buffer)
+		return;
+	const int pitch = g->bitmap.pitch < 0 ? -g->bitmap.pitch : g->bitmap.pitch;
+	unsigned char* p = g->bitmap.buffer;
+	for(unsigned int i = 0; i < g->bitmap.rows * (unsigned int)pitch; i++)
+		p[i] = p[i] >= 128 ? 255 : 0;
+}
+
 int Font::getSize() const { return mSize; }
 
 std::map< std::pair<std::string, int>, std::weak_ptr<Font> > Font::sFontMap;
@@ -118,6 +129,10 @@ bool Font::unload()
 
 std::shared_ptr<Font> Font::get(int size, const std::string& path)
 {
+	// BTV9: no modo pixel, tamanhos múltiplos de 8 (grade da fonte pixelada)
+	if(Renderer::isPixelMode())
+		size = size < 16 ? 8 : (size / 8) * 8;
+
 	const std::string canonicalPath = Utils::FileSystem::getCanonicalPath(path);
 
 	std::pair<std::string, int> def(canonicalPath.empty() ? getDefaultPath() : canonicalPath, size);
@@ -341,6 +356,7 @@ Font::Glyph* Font::getGlyph(unsigned int id)
 		LOG(LogError) << "Could not find glyph for character " << id << " for font " << mPath << ", size " << mSize << "!";
 		return NULL;
 	}
+	hardenGlyph(g);
 
 	Vector2i glyphSize(g->bitmap.width, g->bitmap.rows);
 
@@ -393,6 +409,7 @@ void Font::rebuildTextures()
 
 		// load the glyph bitmap through FT
 		FT_Load_Char(face, it->first, FT_LOAD_RENDER);
+		hardenGlyph(glyphSlot);
 
 		FontTexture* tex = it->second.texture;
 

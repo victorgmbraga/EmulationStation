@@ -8,6 +8,7 @@
 #include "guis/GuiGeneralScreensaverOptions.h"
 #include "guis/GuiMsgBox.h"
 #include "guis/GuiSettings.h"
+#include "guis/GuiWifi.h"
 #include "views/UIModeController.h"
 #include "views/ViewController.h"
 #include "CollectionSystemManager.h"
@@ -31,6 +32,7 @@ GuiMenu::GuiMenu(Window* window) : GuiComponent(window), mMenu(window, "MAIN MEN
 		addEntry("UI SETTINGS", 0xBCBEBCFF, true, [this] { openUISettings(); });
 		addEntry("GAME COLLECTION SETTINGS", 0xBCBEBCFF, true, [this] { openCollectionSystemSettings(); });
 		addEntry("OTHER SETTINGS", 0xBCBEBCFF, true, [this] { openOtherSettings(); });
+		addEntry("WI-FI", 0xBCBEBCFF, true, [this] { GuiWifi::open(mWindow); }); // BTV9
 		addEntry("CONFIGURE INPUT", 0xBCBEBCFF, true, [this] { openConfigInput(); });
 	}
 

@@ -288,6 +288,7 @@ inline const std::string& tr(const std::string& text)
 		{"ACCEPT RESULT", "ACEITAR"},
 		{"ADD STAR", "DAR ESTRELA"},
 		{"BACK", "VOLTAR"},
+		{"MAIUSC.", "MAIÚSC."}, // teclado na tela (o toUpper do ES não converte acentos)
 		{"CHANGE", "MUDAR"},
 		{"CHOOSE", "ESCOLHER"},
 		{"CLOSE", "FECHAR"},

@@ -14,7 +14,7 @@ GuiMsgBox::GuiMsgBox(Window* window, const std::string& text,
 	float width = Renderer::getScreenWidth() * 0.6f; // max width
 	float minWidth = Renderer::getScreenWidth() * 0.3f; // minimum width
 
-	mMsg = std::make_shared<TextComponent>(mWindow, text, Font::get(FONT_SIZE_MEDIUM), 0x777777FF, ALIGN_CENTER);
+	mMsg = std::make_shared<TextComponent>(mWindow, text, Font::get(FONT_SIZE_MEDIUM), 0xBCBEBCFF, ALIGN_CENTER);
 	mGrid.setEntry(mMsg, Vector2i(0, 0), false, false);
 
 	// create the buttons

@@ -39,10 +39,10 @@ GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector
 
 	mHeaderGrid = std::make_shared<ComponentGrid>(mWindow, Vector2i(1, 5));
 
-	mTitle = std::make_shared<TextComponent>(mWindow, "EDIT METADATA", Font::get(FONT_SIZE_LARGE), 0x555555FF, ALIGN_CENTER);
+	mTitle = std::make_shared<TextComponent>(mWindow, "EDIT METADATA", Font::get(FONT_SIZE_LARGE), 0xF7FBF7FF, ALIGN_CENTER);
 	std::string tgt = md->getType() == GAME_METADATA ? "GAME" : "FOLDER";
 	std::string subt = tgt + ": " + Utils::String::toUpper(Utils::FileSystem::getFileName(game->getPath()));
-	mSubtitle = std::make_shared<TextComponent>(mWindow, subt, Font::get(FONT_SIZE_SMALL), 0x777777FF, ALIGN_CENTER);
+	mSubtitle = std::make_shared<TextComponent>(mWindow, subt, Font::get(FONT_SIZE_SMALL), 0xBCBEBCFF, ALIGN_CENTER);
 	mHeaderGrid->setEntry(mTitle, Vector2i(0, 1), false, true);
 	mHeaderGrid->setEntry(mSubtitle, Vector2i(0, 3), false, true);
 
@@ -67,7 +67,7 @@ GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector
 		if (iter->type == MD_DATE) {
 			lblTxt += " (" + DateTimeComponent::getDateformatTip() + ")";
 		}
-		auto lbl = std::make_shared<TextComponent>(mWindow, lblTxt, Font::get(FONT_SIZE_SMALL), 0x777777FF);
+		auto lbl = std::make_shared<TextComponent>(mWindow, lblTxt, Font::get(FONT_SIZE_SMALL), 0xBCBEBCFF);
 		row.addElement(lbl, true); // label
 
 		switch(iter->type)
@@ -118,7 +118,7 @@ GuiMetaDataEd::GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector
 		default:
 			{
 				// MD_STRING
-				ed = std::make_shared<TextComponent>(window, "", Font::get(FONT_SIZE_SMALL, FONT_PATH_LIGHT), 0x777777FF, ALIGN_RIGHT);
+				ed = std::make_shared<TextComponent>(window, "", Font::get(FONT_SIZE_SMALL, FONT_PATH_LIGHT), 0xBCBEBCFF, ALIGN_RIGHT);
 				const float height = lbl->getSize().y() * 0.71f;
 				ed->setSize(0, height);
 				row.addElement(ed, true);

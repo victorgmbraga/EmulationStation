@@ -27,16 +27,16 @@ GuiMenu::GuiMenu(Window* window) : GuiComponent(window), mMenu(window, "MAIN MEN
 	bool isFullUI = UIModeController::getInstance()->isUIModeFull();
 
 	if (isFullUI) {
-		addEntry("SOUND SETTINGS", 0x777777FF, true, [this] { openSoundSettings(); });
-		addEntry("UI SETTINGS", 0x777777FF, true, [this] { openUISettings(); });
-		addEntry("GAME COLLECTION SETTINGS", 0x777777FF, true, [this] { openCollectionSystemSettings(); });
-		addEntry("OTHER SETTINGS", 0x777777FF, true, [this] { openOtherSettings(); });
-		addEntry("CONFIGURE INPUT", 0x777777FF, true, [this] { openConfigInput(); });
+		addEntry("SOUND SETTINGS", 0xBCBEBCFF, true, [this] { openSoundSettings(); });
+		addEntry("UI SETTINGS", 0xBCBEBCFF, true, [this] { openUISettings(); });
+		addEntry("GAME COLLECTION SETTINGS", 0xBCBEBCFF, true, [this] { openCollectionSystemSettings(); });
+		addEntry("OTHER SETTINGS", 0xBCBEBCFF, true, [this] { openOtherSettings(); });
+		addEntry("CONFIGURE INPUT", 0xBCBEBCFF, true, [this] { openConfigInput(); });
 	} else {
-		addEntry("SOUND SETTINGS", 0x777777FF, true, [this] { openSoundSettings(); });
+		addEntry("SOUND SETTINGS", 0xBCBEBCFF, true, [this] { openSoundSettings(); });
 	}
 
-	addEntry("QUIT", 0x777777FF, true, [this] {openQuitMenu(); });
+	addEntry("QUIT", 0xBCBEBCFF, true, [this] {openQuitMenu(); });
 
 	addChild(&mMenu);
 	addVersionInfo();
@@ -158,7 +158,7 @@ void GuiMenu::openUISettings()
 	// screensaver
 	ComponentListRow screensaver_row;
 	screensaver_row.elements.clear();
-	screensaver_row.addElement(std::make_shared<TextComponent>(mWindow, "SCREENSAVER SETTINGS", Font::get(FONT_SIZE_MEDIUM), 0x777777FF), true);
+	screensaver_row.addElement(std::make_shared<TextComponent>(mWindow, "SCREENSAVER SETTINGS", Font::get(FONT_SIZE_MEDIUM), 0xBCBEBCFF), true);
 	screensaver_row.addElement(makeArrow(mWindow), false);
 	screensaver_row.makeAcceptInputHandler(std::bind(&GuiMenu::openScreensaverOptions, this));
 	s->addRow(screensaver_row);
@@ -366,7 +366,7 @@ void GuiMenu::openQuitMenu()
 		} else {
 			row.makeAcceptInputHandler(restart_es_fx);
 		}
-		row.addElement(std::make_shared<TextComponent>(window, "RESTART EMULATIONSTATION", Font::get(FONT_SIZE_MEDIUM), 0x777777FF), true);
+		row.addElement(std::make_shared<TextComponent>(window, "RESTART EMULATIONSTATION", Font::get(FONT_SIZE_MEDIUM), 0xBCBEBCFF), true);
 		s->addRow(row);
 
 		if(Settings::getInstance()->getBool("ShowExit"))
@@ -384,7 +384,7 @@ void GuiMenu::openQuitMenu()
 			} else {
 				row.makeAcceptInputHandler(quit_es_fx);
 			}
-			row.addElement(std::make_shared<TextComponent>(window, "QUIT EMULATIONSTATION", Font::get(FONT_SIZE_MEDIUM), 0x777777FF), true);
+			row.addElement(std::make_shared<TextComponent>(window, "QUIT EMULATIONSTATION", Font::get(FONT_SIZE_MEDIUM), 0xBCBEBCFF), true);
 			s->addRow(row);
 		}
 	}
@@ -405,7 +405,7 @@ void GuiMenu::openQuitMenu()
 	} else {
 		row.makeAcceptInputHandler(reboot_sys_fx);
 	}
-	row.addElement(std::make_shared<TextComponent>(window, "RESTART SYSTEM", Font::get(FONT_SIZE_MEDIUM), 0x777777FF), true);
+	row.addElement(std::make_shared<TextComponent>(window, "RESTART SYSTEM", Font::get(FONT_SIZE_MEDIUM), 0xBCBEBCFF), true);
 	s->addRow(row);
 
 	auto static shutdown_sys_fx = [] {
@@ -424,7 +424,7 @@ void GuiMenu::openQuitMenu()
 	} else {
 		row.makeAcceptInputHandler(shutdown_sys_fx);
 	}
-	row.addElement(std::make_shared<TextComponent>(window, "SHUTDOWN SYSTEM", Font::get(FONT_SIZE_MEDIUM), 0x777777FF), true);
+	row.addElement(std::make_shared<TextComponent>(window, "SHUTDOWN SYSTEM", Font::get(FONT_SIZE_MEDIUM), 0xBCBEBCFF), true);
 	s->addRow(row);
 	mWindow->pushGui(s);
 }

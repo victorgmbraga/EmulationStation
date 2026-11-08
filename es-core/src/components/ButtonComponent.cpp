@@ -9,8 +9,9 @@ ButtonComponent::ButtonComponent(Window* window, const std::string& text, const 
 	mFont(Font::get(FONT_SIZE_MEDIUM)),
 	mFocused(false),
 	mEnabled(true),
-	mTextColorFocused(0xFFFFFFFF), mTextColorUnfocused(0x777777FF)
+	mTextColorFocused(0xFFFFFFFF), mTextColorUnfocused(0xBCBEBCFF)
 {
+	mBox.setCornerSize(4, 4); // BTV9: botão reto; canto pequeno para caber na fonte de 8 px
 	setPressedFunc(func);
 	setText(text, helpText);
 	updateImage();
@@ -18,7 +19,7 @@ ButtonComponent::ButtonComponent(Window* window, const std::string& text, const 
 
 void ButtonComponent::onSizeChanged()
 {
-	mBox.fitTo(mSize, Vector3f::Zero(), Vector2f(-32, -32));
+	mBox.fitTo(mSize, Vector3f::Zero(), Vector2f(-8, -8));
 }
 
 void ButtonComponent::setPressedFunc(std::function<void()> f)
@@ -46,7 +47,7 @@ void ButtonComponent::setText(const std::string& text, const std::string& helpTe
 	mTextCache = std::unique_ptr<TextCache>(mFont->buildTextCache(Utils::PtBr::tr(mText), 0, 0, getCurTextColor())); // BTV9 pt-BR
 
 	float minWidth = mFont->sizeText("DELETE").x() + 12;
-	setSize(Math::max(mTextCache->metrics.size.x() + 12, minWidth), mTextCache->metrics.size.y());
+	setSize(Math::max(mTextCache->metrics.size.x() + 12, minWidth), mTextCache->metrics.size.y() + 8);
 
 	updateHelpPrompts();
 }

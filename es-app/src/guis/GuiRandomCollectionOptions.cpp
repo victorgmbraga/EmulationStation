@@ -24,9 +24,9 @@ GuiRandomCollectionOptions::GuiRandomCollectionOptions(Window* window) : GuiComp
 void GuiRandomCollectionOptions::initializeMenu()
 {
 	// get collections
-	addEntry("INCLUDE SYSTEMS", 0x777777FF, true, [this] { selectSystems(); });
-	addEntry("INCLUDE AUTO COLLECTIONS", 0x777777FF, true, [this] { selectAutoCollections(); });
-	addEntry("INCLUDE CUSTOM COLLECTIONS", 0x777777FF, true, [this] { selectCustomCollections(); });
+	addEntry("INCLUDE SYSTEMS", 0xBCBEBCFF, true, [this] { selectSystems(); });
+	addEntry("INCLUDE AUTO COLLECTIONS", 0xBCBEBCFF, true, [this] { selectAutoCollections(); });
+	addEntry("INCLUDE CUSTOM COLLECTIONS", 0xBCBEBCFF, true, [this] { selectCustomCollections(); });
 
 	// Add option to exclude games from a collection
 	exclusionCollection = std::make_shared< OptionListComponent<std::string> >(mWindow, "EXCLUDE GAMES FROM", false);
@@ -155,7 +155,7 @@ void GuiRandomCollectionOptions::selectEntries(std::map<std::string, CollectionS
 			{
 				colItems->add(std::to_string(i), i, i == selectedValue);
 			}
-			row.addElement(std::make_shared<TextComponent>(mWindow, Utils::String::toUpper(label), Font::get(FONT_SIZE_MEDIUM), 0x777777FF), true);
+			row.addElement(std::make_shared<TextComponent>(mWindow, Utils::String::toUpper(label), Font::get(FONT_SIZE_MEDIUM), 0xBCBEBCFF), true);
 			row.addElement(colItems, false);
 
 			s->addRow(row);

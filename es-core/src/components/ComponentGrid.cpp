@@ -152,6 +152,8 @@ void ComponentGrid::updateSeparators()
 
 	const unsigned int color = Renderer::convertColor(0xC6C7C6FF);
 	bool drawAll = Settings::getInstance()->getBool("DebugGrid");
+	if(!drawAll)
+		return; // BTV9: sem linhas separadoras
 
 	Vector2f pos;
 	Vector2f size;

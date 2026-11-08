@@ -18,7 +18,7 @@ MenuComponent::MenuComponent(Window* window, const char* title, const std::share
 	// set up title
 	mTitle = std::make_shared<TextComponent>(mWindow);
 	mTitle->setHorizontalAlignment(ALIGN_CENTER);
-	mTitle->setColor(0x555555FF);
+	mTitle->setColor(0xF7FBF7FF);
 	setTitle(title, titleFont);
 	mGrid.setEntry(mTitle, Vector2i(0, 0), false);
 
@@ -62,7 +62,8 @@ void MenuComponent::updateSize()
 		}
 	}
 
-	float width = (float)Math::min((int)Renderer::getScreenHeight(), (int)(Renderer::getScreenWidth() * 0.90f));
+	// BTV9: menu um pouco mais largo (450 px em 640x360)
+	float width = (float)Math::min((int)(Renderer::getScreenHeight() * 1.25f), (int)(Renderer::getScreenWidth() * 0.90f));
 	setSize(width, height);
 }
 

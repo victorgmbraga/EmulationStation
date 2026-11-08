@@ -13,10 +13,11 @@
 
 class TextCache;
 
-#define FONT_SIZE_MINI ((unsigned int)(0.030f * Math::min((int)Renderer::getScreenHeight(), (int)Renderer::getScreenWidth())))
-#define FONT_SIZE_SMALL ((unsigned int)(0.035f * Math::min((int)Renderer::getScreenHeight(), (int)Renderer::getScreenWidth())))
-#define FONT_SIZE_MEDIUM ((unsigned int)(0.045f * Math::min((int)Renderer::getScreenHeight(), (int)Renderer::getScreenWidth())))
-#define FONT_SIZE_LARGE ((unsigned int)(0.085f * Math::min((int)Renderer::getScreenHeight(), (int)Renderer::getScreenWidth())))
+// BTV9: no modo pixel os menus usam 8 px (itens) e 16 px (titulos)
+#define FONT_SIZE_MINI (Renderer::isPixelMode() ? 8u : (unsigned int)(0.030f * Math::min((int)Renderer::getScreenHeight(), (int)Renderer::getScreenWidth())))
+#define FONT_SIZE_SMALL (Renderer::isPixelMode() ? 8u : (unsigned int)(0.035f * Math::min((int)Renderer::getScreenHeight(), (int)Renderer::getScreenWidth())))
+#define FONT_SIZE_MEDIUM (Renderer::isPixelMode() ? 8u : (unsigned int)(0.045f * Math::min((int)Renderer::getScreenHeight(), (int)Renderer::getScreenWidth())))
+#define FONT_SIZE_LARGE (Renderer::isPixelMode() ? 16u : (unsigned int)(0.085f * Math::min((int)Renderer::getScreenHeight(), (int)Renderer::getScreenWidth())))
 
 // BTV9: fonte retrô (Press Start 2P, SIL OFL 1.1 — ver resources/PressStart2P-OFL.txt)
 #define FONT_PATH_LIGHT ":/PressStart2P-Regular.ttf"

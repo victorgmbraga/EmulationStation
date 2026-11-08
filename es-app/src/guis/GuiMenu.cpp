@@ -119,36 +119,6 @@ void GuiMenu::openSoundSettings()
 			}
 			Settings::getInstance()->setBool("EnableSounds", sounds_enabled->getState());
 		});
-
-		auto video_audio = std::make_shared<SwitchComponent>(mWindow);
-		video_audio->setState(Settings::getInstance()->getBool("VideoAudio"));
-		s->addWithLabel("ENABLE VIDEO AUDIO", video_audio);
-		s->addSaveFunc([video_audio] { Settings::getInstance()->setBool("VideoAudio", video_audio->getState()); });
-
-#ifdef _OMX_
-		// OMX player Audio Device
-		auto omx_audio_dev = std::make_shared< OptionListComponent<std::string> >(mWindow, "OMX PLAYER AUDIO DEVICE", false);
-		std::vector<std::string> omx_cards;
-		// RPi Specific  Audio Cards
-		omx_cards.push_back("local");
-		omx_cards.push_back("hdmi");
-		omx_cards.push_back("both");
-		omx_cards.push_back("alsa");
-		omx_cards.push_back("alsa:hw:0,0");
-		omx_cards.push_back("alsa:hw:1,0");
-		if (Settings::getInstance()->getString("OMXAudioDev") != "") {
-			if (std::find(omx_cards.begin(), omx_cards.end(), Settings::getInstance()->getString("OMXAudioDev")) == omx_cards.end()) {
-				omx_cards.push_back(Settings::getInstance()->getString("OMXAudioDev"));
-			}
-		}
-		for (auto it = omx_cards.cbegin(); it != omx_cards.cend(); it++)
-			omx_audio_dev->add(*it, *it, Settings::getInstance()->getString("OMXAudioDev") == *it);
-		s->addWithLabel("OMX PLAYER AUDIO DEVICE", omx_audio_dev);
-		s->addSaveFunc([omx_audio_dev] {
-			if (Settings::getInstance()->getString("OMXAudioDev") != omx_audio_dev->getSelected())
-				Settings::getInstance()->setString("OMXAudioDev", omx_audio_dev->getSelected());
-		});
-#endif
 	}
 
 	mWindow->pushGui(s);
@@ -342,36 +312,11 @@ void GuiMenu::openOtherSettings()
 	s->addWithLabel("ASYNC FILE IO", async_file_io);
 	s->addSaveFunc([async_file_io] { Settings::getInstance()->setBool("AsyncFileIO", async_file_io->getState()); });
 
-	auto local_art = std::make_shared<SwitchComponent>(mWindow);
-	local_art->setState(Settings::getInstance()->getBool("LocalArt"));
-	s->addWithLabel("SEARCH FOR LOCAL ART", local_art);
-	s->addSaveFunc([local_art] { Settings::getInstance()->setBool("LocalArt", local_art->getState()); });
-
 	// hidden files
 	auto hidden_files = std::make_shared<SwitchComponent>(mWindow);
 	hidden_files->setState(Settings::getInstance()->getBool("ShowHiddenFiles"));
 	s->addWithLabel("SHOW HIDDEN FILES", hidden_files);
 	s->addSaveFunc([hidden_files] { Settings::getInstance()->setBool("ShowHiddenFiles", hidden_files->getState()); });
-
-#ifdef _OMX_
-	// Video Player - VideoOmxPlayer
-	auto omx_player = std::make_shared<SwitchComponent>(mWindow);
-	omx_player->setState(Settings::getInstance()->getBool("VideoOmxPlayer"));
-	s->addWithLabel("USE OMX PLAYER (HW ACCELERATED)", omx_player);
-	s->addSaveFunc([omx_player]
-	{
-		// need to reload all views to re-create the right video components
-		bool needReload = false;
-		if(Settings::getInstance()->getBool("VideoOmxPlayer") != omx_player->getState())
-			needReload = true;
-
-		Settings::getInstance()->setBool("VideoOmxPlayer", omx_player->getState());
-
-		if(needReload)
-			ViewController::get()->reloadAll();
-	});
-
-#endif
 
 	// framerate
 	auto framerate = std::make_shared<SwitchComponent>(mWindow);

@@ -8,6 +8,9 @@
 #include "components/MenuComponent.h"
 #include "GuiComponent.h"
 
+// BTV9: roda "sudo -n <script> <args>" sem shell e devolve a saída (usado também pela atualização)
+std::string btv9RunRoot(const std::string& script, const std::vector<std::string>& args, const std::string& input = "");
+
 struct WifiNetwork
 {
 	bool active;

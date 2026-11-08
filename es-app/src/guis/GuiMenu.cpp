@@ -8,7 +8,10 @@
 #include "guis/GuiGeneralScreensaverOptions.h"
 #include "guis/GuiMsgBox.h"
 #include "guis/GuiSettings.h"
+#include "guis/GuiBusy.h"
 #include "guis/GuiWifi.h"
+#include "utils/FileSystemUtil.h"
+#include <fstream>
 #include "views/UIModeController.h"
 #include "views/ViewController.h"
 #include "CollectionSystemManager.h"
@@ -33,6 +36,7 @@ GuiMenu::GuiMenu(Window* window) : GuiComponent(window), mMenu(window, "MAIN MEN
 		addEntry("GAME COLLECTION SETTINGS", 0xBCBEBCFF, true, [this] { openCollectionSystemSettings(); });
 		addEntry("OTHER SETTINGS", 0xBCBEBCFF, true, [this] { openOtherSettings(); });
 		addEntry("WI-FI", 0xBCBEBCFF, true, [this] { GuiWifi::open(mWindow); }); // BTV9
+		addEntry("ATUALIZAR EMULATIONSTATION", 0xBCBEBCFF, true, [this] { checkUpdate(mWindow); }); // BTV9
 		addEntry("CONFIGURE INPUT", 0xBCBEBCFF, true, [this] { openConfigInput(); });
 	}
 
@@ -363,13 +367,42 @@ void GuiMenu::openQuitMenu()
 	mWindow->pushGui(s);
 }
 
+// BTV9: procura versão nova nos releases do GitHub (/opt/btv9/es-update.sh menu) e,
+// se houver, oferece reiniciar o ES para instalar (a instalação roda antes de o ES iniciar)
+#define UPDATE_SCRIPT "/opt/btv9/es-update.sh"
+void GuiMenu::checkUpdate(Window* window)
+{
+	window->pushGui(new GuiBusy(window, "PROCURANDO ATUALIZAÇÃO",
+		[] { return btv9RunRoot(UPDATE_SCRIPT, { "menu" }); },
+		[window](const std::string& out) {
+			// saída: "<ESTADO> <versão>"; ESTADO = PRONTA (baixada), ATUAL ou ERRO
+			std::string state = out.substr(0, out.find(' '));
+			std::string ver = out.find(' ') == std::string::npos ? "" : out.substr(out.find(' ') + 1);
+			ver = Utils::String::toUpper(ver.substr(0, ver.find('\n')));
+			if(state == "PRONTA")
+				window->pushGui(new GuiMsgBox(window, "VERSÃO NOVA BAIXADA: " + ver + "\nREINICIAR O EMULATIONSTATION AGORA PARA INSTALAR?",
+					"SIM", [] { btv9RunRoot(UPDATE_SCRIPT, { "restart" }); },
+					"DEPOIS", nullptr));
+			else if(state == "ATUAL")
+				window->pushGui(new GuiMsgBox(window, "O EMULATIONSTATION JÁ ESTÁ NA VERSÃO MAIS NOVA (" + ver + ")."));
+			else
+				window->pushGui(new GuiMsgBox(window, "NÃO FOI POSSÍVEL PROCURAR ATUALIZAÇÃO.\nVERIFIQUE A CONEXÃO COM A INTERNET."));
+		}));
+}
+
 void GuiMenu::addVersionInfo()
 {
 	std::string  buildDate = (Settings::getInstance()->getBool("Debug") ? std::string( "   (" + Utils::String::toUpper(PROGRAM_BUILT_STRING) + ")") : (""));
 
 	mVersion.setFont(Font::get(FONT_SIZE_SMALL));
 	mVersion.setColor(0x5E5E5EFF);
-	mVersion.setText("EMULATIONSTATION V" + Utils::String::toUpper(PROGRAM_VERSION_STRING) + buildDate);
+	// BTV9: versão do release instalado (arquivo VERSION ao lado do executável)
+	std::string release;
+	std::ifstream vf(Utils::FileSystem::getExePath() + "/VERSION");
+	if(vf && std::getline(vf, release) && !release.empty())
+		mVersion.setText("EMULATIONSTATION " + Utils::String::toUpper(release) + buildDate);
+	else
+		mVersion.setText("EMULATIONSTATION V" + Utils::String::toUpper(PROGRAM_VERSION_STRING) + buildDate);
 	mVersion.setHorizontalAlignment(ALIGN_CENTER);
 	addChild(&mVersion);
 }

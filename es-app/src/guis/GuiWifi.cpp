@@ -15,11 +15,11 @@
 #define WIFI_SCRIPT "/opt/btv9/wifi.sh"
 #define WIFI_TEXT 0xBCBEBCFF
 
-// Roda "sudo -n wifi.sh <args>" sem shell (o SSID vai como argumento, sem risco de aspas)
+// Roda "sudo -n <script> <args>" sem shell (o SSID vai como argumento, sem risco de aspas)
 // e devolve a saída. A senha, quando há, vai pela entrada padrão.
-static std::string runWifi(const std::vector<std::string>& args, const std::string& input = "")
+std::string btv9RunRoot(const std::string& script, const std::vector<std::string>& args, const std::string& input)
 {
-	std::vector<std::string> all = { "/usr/bin/sudo", "-n", WIFI_SCRIPT };
+	std::vector<std::string> all = { "/usr/bin/sudo", "-n", script };
 	all.insert(all.end(), args.begin(), args.end());
 	std::vector<char*> argv;
 	for(auto& a : all)
@@ -82,6 +82,11 @@ static std::string runWifi(const std::vector<std::string>& args, const std::stri
 	int status;
 	waitpid(pid, &status, 0);
 	return result;
+}
+
+static std::string runWifi(const std::vector<std::string>& args, const std::string& input = "")
+{
+	return btv9RunRoot(WIFI_SCRIPT, args, input);
 }
 
 static std::vector< std::vector<std::string> > splitLines(const std::string& text)

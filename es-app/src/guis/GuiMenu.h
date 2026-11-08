@@ -20,6 +20,7 @@ public:
 private:
 	void addEntry(const char* name, unsigned int color, bool add_arrow, const std::function<void()>& func);
 	void addVersionInfo();
+	static void checkUpdate(Window* window); // BTV9
 	void openCollectionSystemSettings();
 	void openConfigInput();
 	void openOtherSettings();

@@ -5,7 +5,8 @@
 SwitchComponent::SwitchComponent(Window* window, bool state) : GuiComponent(window), mImage(window), mState(state)
 {
 	mImage.setImage(":/off.svg");
-	mImage.setResize(0, Font::get(FONT_SIZE_MEDIUM)->getLetterHeight());
+	// BTV9: no modo pixel o ícone tem 8 px de altura exatos (sem borrar)
+	mImage.setResize(0, Renderer::isPixelMode() ? 8.0f : Font::get(FONT_SIZE_MEDIUM)->getLetterHeight());
 	mSize = mImage.getSize();
 }
 

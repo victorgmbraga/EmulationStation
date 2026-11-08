@@ -57,7 +57,7 @@ private:
 					// add checkbox
 					auto checkbox = std::make_shared<ImageComponent>(mWindow);
 					checkbox->setImage(it->selected ? CHECKED_PATH : UNCHECKED_PATH);
-					checkbox->setResize(0, font->getLetterHeight());
+					checkbox->setResize(0, Renderer::isPixelMode() ? 8.0f : font->getLetterHeight()); // BTV9
 					row.addElement(checkbox, false);
 
 					// input handler

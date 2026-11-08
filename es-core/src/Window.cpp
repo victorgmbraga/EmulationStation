@@ -116,13 +116,6 @@ void Window::textInput(const char* text)
 
 void Window::input(InputConfig* config, Input input)
 {
-	if (mScreenSaver && mScreenSaver->isScreenSaverActive() && Settings::getInstance()->getBool("ScreenSaverControls")
-		&& mScreenSaver->inputDuringScreensaver(config, input))
-	{
-		mTimeSinceLastInput = 0;
-		return;
-	}
-
 	if (mSleeping)
 	{
 		mSleeping = false;

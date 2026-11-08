@@ -579,6 +579,36 @@ namespace Renderer
 
 	} // presentPixelBuffer
 
+	// BTV9: tela de abertura nítida. Entre beginDirectDraw() e endDirectDraw() as coordenadas
+	// são as da janela real (ex.: 1280x720), sem passar pelo buffer pixelado.
+	static Transform4x4f directSavedProjection;
+
+	void beginDirectDraw()
+	{
+		directSavedProjection = projectionMatrix;
+		GL_CHECK_ERROR(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+		GL_CHECK_ERROR(glViewport(0, 0, getWindowWidth(), getWindowHeight()));
+		GL_CHECK_ERROR(glClear(GL_COLOR_BUFFER_BIT));
+		Transform4x4f projection = Transform4x4f::Identity();
+		projection.orthoProjection(0, (float)getWindowWidth(), (float)getWindowHeight(), 0, -1.0f, 1.0f);
+		setProjection(projection);
+		setMatrix(Transform4x4f::Identity());
+
+	} // beginDirectDraw
+
+	void endDirectDraw()
+	{
+		SDL_GL_SwapWindow(getSDLWindow());
+		if(pixelFbo)
+		{
+			GL_CHECK_ERROR(glBindFramebuffer(GL_FRAMEBUFFER, pixelFbo));
+			GL_CHECK_ERROR(glViewport(0, 0, getScreenWidth(), getScreenHeight()));
+		}
+		setProjection(directSavedProjection);
+		GL_CHECK_ERROR(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+
+	} // endDirectDraw
+
 	void swapBuffers()
 	{
 		if(pixelFbo)

@@ -97,6 +97,8 @@ namespace Renderer
 	void         setScissor        (const Rect& _scissor);
 	void         setSwapInterval   ();
 	void         swapBuffers       ();
+	void         beginDirectDraw   (); // BTV9: desenha na resolução real, fora do buffer do modo pixel
+	void         endDirectDraw     (); // BTV9: mostra o quadro desenhado direto e volta ao buffer
 
 } // Renderer::
 

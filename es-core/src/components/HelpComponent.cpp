@@ -3,6 +3,7 @@
 #include "components/ComponentGrid.h"
 #include "components/ImageComponent.h"
 #include "components/TextComponent.h"
+#include "renderers/Renderer.h"
 #include "resources/TextureResource.h"
 #include "utils/StringUtil.h"
 #include "Log.h"
@@ -68,7 +69,8 @@ void HelpComponent::updateGrid()
 	std::vector< std::shared_ptr<TextComponent> > labels;
 
 	float width = 0;
-	const float height = Math::round(font->getLetterHeight() * 1.25f);
+	// BTV9: no modo pixel, ícones 8x8 no tamanho exato da fonte (1 pixel do ícone = 1 pixel da tela)
+	const float height = Renderer::isPixelMode() ? (float)font->getSize() : Math::round(font->getLetterHeight() * 1.25f);
 	for(auto it = mPrompts.cbegin(); it != mPrompts.cend(); it++)
 	{
 		auto icon = std::make_shared<ImageComponent>(mWindow);

@@ -183,13 +183,6 @@ bool SystemView::input(InputConfig* config, Input input)
 			ViewController::get()->goToGameList(getSelected());
 			return true;
 		}
-		if (config->isMappedTo("x", input))
-		{
-			// get random system
-			// go to system
-			setCursor(SystemData::getRandomSystem());
-			return true;
-		}
 	}else{
 		if(config->isMappedLike("left", input) ||
 			config->isMappedLike("right", input) ||
@@ -197,12 +190,6 @@ bool SystemView::input(InputConfig* config, Input input)
 			config->isMappedLike("down", input))
 			listInput(0);
 		Scripting::fireEvent("system-select", this->IList::getSelected()->getName(), "input");
-		if(!UIModeController::getInstance()->isUIModeKid() && config->isMappedTo("select", input) && Settings::getInstance()->getBool("ScreenSaverControls"))
-		{
-			mWindow->startScreenSaver();
-			mWindow->renderScreenSaver();
-			return true;
-		}
 	}
 
 	return GuiComponent::input(config, input);
@@ -381,10 +368,6 @@ std::vector<HelpPrompt> SystemView::getHelpPrompts()
 	else
 		prompts.push_back(HelpPrompt("left/right", "choose"));
 	prompts.push_back(HelpPrompt("a", "select"));
-	prompts.push_back(HelpPrompt("x", "random"));
-
-	if (!UIModeController::getInstance()->isUIModeKid() && Settings::getInstance()->getBool("ScreenSaverControls"))
-		prompts.push_back(HelpPrompt("select", "launch screensaver"));
 
 	return prompts;
 }

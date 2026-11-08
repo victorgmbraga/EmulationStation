@@ -77,19 +77,6 @@ GuiGamelistOptions::GuiGamelistOptions(Window* window, SystemData* system) : Gui
 			mMenu.addRow(row);
 		}
 
-		// add launch system screensaver
-		std::string screensaver_behavior = Settings::getInstance()->getString("ScreenSaverBehavior");
-		bool useGamelistMedia = screensaver_behavior == "random video" || (screensaver_behavior == "slideshow" && !Settings::getInstance()->getBool("SlideshowScreenSaverCustomMediaSource"));
-		bool rpConfigSelected = "retropie" == mSystem->getName();
-		bool collectionsSelected = mSystem->getName() == CollectionSystemManager::get()->getCustomCollectionsBundle()->getName();
-
-		if (!rpConfigSelected && useGamelistMedia && (!collectionsSelected || collectionsSelected && file->getType() == GAME)) {
-			row.elements.clear();
-			row.addElement(std::make_shared<TextComponent>(mWindow, "LAUNCH SYSTEM SCREENSAVER", Font::get(FONT_SIZE_MEDIUM), 0x777777FF), true);
-			row.makeAcceptInputHandler(std::bind(&GuiGamelistOptions::launchSystemScreenSaver, this));
-			mMenu.addRow(row);
-		}
-
 		// "sort list by" menuitem
 		mListSort = std::make_shared<SortList>(mWindow, "SORT GAMES BY", false);
 		for(unsigned int i = 0; i < FileSorts::SortTypes.size(); i++)
@@ -181,24 +168,6 @@ GuiGamelistOptions::~GuiGamelistOptions()
 			getGamelist()->onFileChanged(root, FILE_SORTED);
 		}
 	}
-}
-
-bool GuiGamelistOptions::launchSystemScreenSaver()
-{
-	SystemData* system = mSystem;
-	std::string systemName = system->getName();
-	// need to check if we're in a folder inside the collections bundle, to launch from there
-	if(systemName == CollectionSystemManager::get()->getCustomCollectionsBundle()->getName())
-	{
-		FileData* file = getGamelist()->getCursor(); // is GAME otherwise menuentry would have been hidden
-		// we are inside a specific collection. We want to launch for that one.
-		system = file->getSystem();
-	}
-	mWindow->startScreenSaver(system);
-	mWindow->renderScreenSaver();
-
-	delete this;
-	return true;
 }
 
 void GuiGamelistOptions::openGamelistFilter()

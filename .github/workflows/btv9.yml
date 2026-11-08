@@ -13,6 +13,9 @@ jobs:
   build:
     runs-on: ubuntu-24.04-arm
     container: debian:trixie
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Dependências (as mesmas do aparelho)
         run: |
@@ -23,7 +26,7 @@ jobs:
             libvlc-dev libvlccore-dev libgles-dev libgles2-mesa-dev libegl-dev libgbm-dev libdrm-dev \
             rapidjson-dev libasound2-dev libpulse-dev zlib1g-dev
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: true
 

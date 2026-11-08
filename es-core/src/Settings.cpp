@@ -179,6 +179,7 @@ void Settings::setDefaults()
 	mIntMap["WindowHeight"]  = 0;
 	mIntMap["ScreenWidth"]   = 0;
 	mIntMap["ScreenHeight"]  = 0;
+	mIntMap["PixelHeight"]   = 480; // BTV9: 0 desliga o modo pixel
 	mIntMap["ScreenOffsetX"] = 0;
 	mIntMap["ScreenOffsetY"] = 0;
 	mIntMap["ScreenRotate"]  = 0;

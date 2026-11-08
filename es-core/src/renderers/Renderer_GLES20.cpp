@@ -7,6 +7,7 @@
 
 #include <SDL_opengles2.h>
 #include <SDL.h>
+#include <algorithm>
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -39,6 +40,8 @@ namespace Renderer
 	static GLint         posAttrib        = 0;
 	static GLuint        vertexBuffer     = 0;
 	static GLuint        whiteTexture     = 0;
+	static GLuint        pixelFbo         = 0; // BTV9: buffer interno do modo pixel
+	static GLuint        pixelTexture     = 0;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -298,12 +301,38 @@ namespace Renderer
 		GL_CHECK_ERROR(glPixelStorei(GL_PACK_ALIGNMENT, 1));
 		GL_CHECK_ERROR(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 
+		// BTV9: modo pixel — toda a interface é desenhada neste buffer e ampliada em swapBuffers()
+		if(isPixelMode())
+		{
+			pixelTexture = createTexture(Texture::RGBA, false, false, getScreenWidth(), getScreenHeight(), nullptr);
+			GL_CHECK_ERROR(glGenFramebuffers(1, &pixelFbo));
+			GL_CHECK_ERROR(glBindFramebuffer(GL_FRAMEBUFFER, pixelFbo));
+			GL_CHECK_ERROR(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pixelTexture, 0));
+			if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			{
+				LOG(LogError) << "Pixel mode: framebuffer incompleto, desenhando direto na tela";
+				GL_CHECK_ERROR(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+				GL_CHECK_ERROR(glDeleteFramebuffers(1, &pixelFbo));
+				pixelFbo = 0;
+			}
+			GL_CHECK_ERROR(glBindTexture(GL_TEXTURE_2D, whiteTexture));
+		}
+
 	} // createContext
 
 //////////////////////////////////////////////////////////////////////////
 
 	void destroyContext()
 	{
+		if(pixelFbo)
+		{
+			GL_CHECK_ERROR(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+			GL_CHECK_ERROR(glDeleteFramebuffers(1, &pixelFbo));
+			GL_CHECK_ERROR(glDeleteTextures(1, &pixelTexture));
+			pixelFbo     = 0;
+			pixelTexture = 0;
+		}
+
 		SDL_GL_DeleteContext(sdlContext);
 		sdlContext = nullptr;
 
@@ -458,7 +487,7 @@ namespace Renderer
 	void setViewport(const Rect& _viewport)
 	{
 		// glViewport starts at the bottom left of the window
-		GL_CHECK_ERROR(glViewport( _viewport.x, getWindowHeight() - _viewport.y - _viewport.h, _viewport.w, _viewport.h));
+		GL_CHECK_ERROR(glViewport( _viewport.x, getTargetHeight() - _viewport.y - _viewport.h, _viewport.w, _viewport.h));
 
 	} // setViewport
 
@@ -473,7 +502,7 @@ namespace Renderer
 		else
 		{
 			// glScissor starts at the bottom left of the window
-			GL_CHECK_ERROR(glScissor(_scissor.x, getWindowHeight() - _scissor.y - _scissor.h, _scissor.w, _scissor.h));
+			GL_CHECK_ERROR(glScissor(_scissor.x, getTargetHeight() - _scissor.y - _scissor.h, _scissor.w, _scissor.h));
 			GL_CHECK_ERROR(glEnable(GL_SCISSOR_TEST));
 		}
 
@@ -502,9 +531,60 @@ namespace Renderer
 
 //////////////////////////////////////////////////////////////////////////
 
+	// BTV9: copia o buffer interno para a tela, ampliado por um fator inteiro e sem suavização
+	static void presentPixelBuffer()
+	{
+		const int fbW  = getScreenWidth();
+		const int fbH  = getScreenHeight();
+		const int winW = getWindowWidth();
+		const int winH = getWindowHeight();
+		int scale = std::min(winW / fbW, winH / fbH);
+		if(scale < 1) scale = 1;
+		const float w = (float)(fbW * scale);
+		const float h = (float)(fbH * scale);
+		const float x = (float)((winW - fbW * scale) / 2);
+		const float y = (float)((winH - fbH * scale) / 2);
+
+		const GLboolean scissor = glIsEnabled(GL_SCISSOR_TEST);
+		GL_CHECK_ERROR(glDisable(GL_SCISSOR_TEST));
+		GL_CHECK_ERROR(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+		GL_CHECK_ERROR(glViewport(0, 0, winW, winH));
+		GL_CHECK_ERROR(glClear(GL_COLOR_BUFFER_BIT));
+
+		const Transform4x4f savedProjection = projectionMatrix;
+		const Transform4x4f savedWorldView  = worldViewMatrix;
+		Transform4x4f projection = Transform4x4f::Identity();
+		projection.orthoProjection(0, (float)winW, (float)winH, 0, -1.0f, 1.0f);
+		setProjection(projection);
+		setMatrix(Transform4x4f::Identity());
+
+		// a textura do framebuffer tem a origem embaixo: v=1 é o topo da interface
+		const Vertex vertices[4] = {
+			{ { x,     y     }, { 0.0f, 1.0f }, 0xFFFFFFFF },
+			{ { x,     y + h }, { 0.0f, 0.0f }, 0xFFFFFFFF },
+			{ { x + w, y     }, { 1.0f, 1.0f }, 0xFFFFFFFF },
+			{ { x + w, y + h }, { 1.0f, 0.0f }, 0xFFFFFFFF }
+		};
+		GL_CHECK_ERROR(glBindTexture(GL_TEXTURE_2D, pixelTexture));
+		drawTriangleStrips(vertices, 4, Blend::ONE, Blend::ZERO);
+
+		SDL_GL_SwapWindow(getSDLWindow());
+
+		GL_CHECK_ERROR(glBindFramebuffer(GL_FRAMEBUFFER, pixelFbo));
+		GL_CHECK_ERROR(glViewport(0, 0, fbW, fbH));
+		setProjection(savedProjection);
+		setMatrix(savedWorldView);
+		if(scissor)
+			GL_CHECK_ERROR(glEnable(GL_SCISSOR_TEST));
+
+	} // presentPixelBuffer
+
 	void swapBuffers()
 	{
-		SDL_GL_SwapWindow(getSDLWindow());
+		if(pixelFbo)
+			presentPixelBuffer();
+		else
+			SDL_GL_SwapWindow(getSDLWindow());
 		GL_CHECK_ERROR(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
 	} // swapBuffers

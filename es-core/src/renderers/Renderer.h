@@ -76,6 +76,8 @@ namespace Renderer
 	int         getScreenOffsetX();
 	int         getScreenOffsetY();
 	int         getScreenRotate ();
+	bool        isPixelMode     (); // BTV9: interface em baixa resolução ampliada sem suavização
+	int         getTargetHeight (); // altura do alvo de desenho (buffer interno no modo pixel)
 
 	// API specific
 	unsigned int convertColor      (const unsigned int _color);

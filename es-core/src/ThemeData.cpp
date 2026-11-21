@@ -28,7 +28,10 @@ std::map<std::string, std::map<std::string, ThemeData::ElementPropertyType>> The
 		{ "colorEnd", COLOR },
 		{ "gradientType", STRING },
 		{ "visible", BOOLEAN },
-		{ "zIndex", FLOAT } } },
+		{ "zIndex", FLOAT },
+		{ "frameGrid", NORMALIZED_PAIR },   // BTV9: folha de quadros (colunas linhas)
+		{ "frameCount", FLOAT },
+		{ "frameRate", FLOAT } } },
 	{ "imagegrid", {
 		{ "pos", RESOLUTION_PAIR },
 		{ "size", RESOLUTION_PAIR },

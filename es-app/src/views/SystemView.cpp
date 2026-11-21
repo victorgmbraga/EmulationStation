@@ -198,6 +198,10 @@ bool SystemView::input(InputConfig* config, Input input)
 void SystemView::update(int deltaTime)
 {
 	listUpdate(deltaTime);
+	// BTV9: as imagens extras não são filhas da view; só as do sistema selecionado animam
+	if(!mEntries.empty())
+		for(auto extra : mEntries.at(mCursor).data.backgroundExtras)
+			extra->update(deltaTime);
 	GuiComponent::update(deltaTime);
 }
 

@@ -116,6 +116,11 @@ private:
 
 	Vector2f mTopLeftCrop;
 	Vector2f mBottomRightCrop;
+
+	// BTV9: animação por folha de quadros (frameGrid/frameCount/frameRate no tema). A textura é a folha
+	// inteira; as coordenadas de textura apontam para o quadro atual.
+	int mFrameCols, mFrameRows, mFrameCount, mFrame, mFrameTime;
+	float mFrameRate;
 };
 
 #endif // ES_CORE_COMPONENTS_IMAGE_COMPONENT_H

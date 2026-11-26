@@ -283,7 +283,8 @@ void SystemView::onCursorChanged(const CursorState& /*state*/)
 
 	Animation* anim;
 	bool move_carousel = Settings::getInstance()->getBool("MoveCarousel");
-	// BTV9: transição sempre instantânea
+	// BTV9: o carrossel desliza até o sistema escolhido (MoveCarousel é fixo em Settings::applyFixed);
+	// os extras (fundo, nome) continuam trocando na hora.
 	anim = new LambdaAnimation(
 		[this, startPos, endPos, posMax, move_carousel ](float t)
 	{

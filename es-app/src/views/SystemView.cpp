@@ -56,6 +56,7 @@ void SystemView::populate()
 					logo->setMaxSize(mCarousel.logoSize * mCarousel.logoScale);
 					logo->applyTheme(theme, "system", "logo", ThemeFlags::PATH | ThemeFlags::COLOR);
 					logo->setRotateByTargetSize(true);
+					logo->setFramePlaying(false); // BTV9: só o logo selecionado anima (ver update)
 					e.data.logo = std::shared_ptr<GuiComponent>(logo);
 				}
 			}
@@ -198,10 +199,22 @@ bool SystemView::input(InputConfig* config, Input input)
 void SystemView::update(int deltaTime)
 {
 	listUpdate(deltaTime);
-	// BTV9: as imagens extras não são filhas da view; só as do sistema selecionado animam
+	// BTV9: as imagens extras não são filhas da view; só as do sistema selecionado animam.
+	// O logo do carrossel também: o selecionado gira; os outros ficam parados no quadro frameIdle.
 	if(!mEntries.empty())
+	{
 		for(auto extra : mEntries.at(mCursor).data.backgroundExtras)
 			extra->update(deltaTime);
+		for(int i = 0; i < (int)mEntries.size(); i++)
+		{
+			ImageComponent* logo = dynamic_cast<ImageComponent*>(mEntries.at(i).data.logo.get());
+			if(!logo)
+				continue;
+			logo->setFramePlaying(i == mCursor);
+			if(i == mCursor)
+				logo->update(deltaTime);
+		}
+	}
 	GuiComponent::update(deltaTime);
 }
 
@@ -459,8 +472,8 @@ void SystemView::renderCarousel(const Transform4x4f& trans)
 		scale = Math::min(mCarousel.logoScale, Math::max(1.0f, scale));
 		scale /= mCarousel.logoScale;
 
-		int opacity = (int)Math::round(0x80 + ((0xFF - 0x80) * (1.0f - fabs(distance))));
-		opacity = Math::max((int) 0x80, opacity);
+		// BTV9: sem transparência nos logos de fora; o tema os diferencia (quadro frameIdle em preto e branco)
+		int opacity = 0xFF;
 
 		const std::shared_ptr<GuiComponent> &comp = mEntries.at(index).data.logo;
 		if (mCarousel.type == VERTICAL_WHEEL || mCarousel.type == HORIZONTAL_WHEEL) {

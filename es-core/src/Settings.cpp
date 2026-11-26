@@ -300,7 +300,7 @@ void Settings::applyFixed()
 	mStringMap["UIMode"]              = "Full";
 	mStringMap["ScreenSaverBehavior"] = "dim";
 	mIntMap["SystemSleepTime"]        = 0;
-	mBoolMap["MoveCarousel"]          = false;
+	mBoolMap["MoveCarousel"]          = true;
 	mBoolMap["QuickSystemSelect"]     = false;
 	mBoolMap["ShowHelpPrompts"]       = true;
 	mStringMap["PowerSaverMode"]      = "disabled";

@@ -31,7 +31,8 @@ std::map<std::string, std::map<std::string, ThemeData::ElementPropertyType>> The
 		{ "zIndex", FLOAT },
 		{ "frameGrid", NORMALIZED_PAIR },   // BTV9: folha de quadros (colunas linhas)
 		{ "frameCount", FLOAT },
-		{ "frameRate", FLOAT } } },
+		{ "frameRate", FLOAT },
+		{ "frameIdle", FLOAT } } },   // BTV9: quadro mostrado quando a animação está parada
 	{ "imagegrid", {
 		{ "pos", RESOLUTION_PAIR },
 		{ "size", RESOLUTION_PAIR },

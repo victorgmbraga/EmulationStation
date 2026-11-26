@@ -23,6 +23,9 @@ public:
 	//Use an already existing texture.
 	void setImage(const std::shared_ptr<TextureResource>& texture);
 
+	// BTV9: liga ou para a animação da folha de quadros; parada, mostra o quadro frameIdle do tema
+	void setFramePlaying(bool playing);
+
 	//Loads the image asynchronously in a background thread. The image will fade in when ready.
 	void setImageAsync(std::string path, bool tile = false);
 
@@ -119,8 +122,10 @@ private:
 
 	// BTV9: animação por folha de quadros (frameGrid/frameCount/frameRate no tema). A textura é a folha
 	// inteira; as coordenadas de textura apontam para o quadro atual.
-	int mFrameCols, mFrameRows, mFrameCount, mFrame, mFrameTime;
+	// Parada (setFramePlaying(false)), mostra o quadro frameIdle (ou o primeiro).
+	int mFrameCols, mFrameRows, mFrameCount, mFrame, mFrameTime, mFrameIdle;
 	float mFrameRate;
+	bool mFramePlaying;
 };
 
 #endif // ES_CORE_COMPONENTS_IMAGE_COMPONENT_H

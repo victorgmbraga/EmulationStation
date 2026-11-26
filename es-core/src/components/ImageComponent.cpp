@@ -24,7 +24,8 @@ ImageComponent::ImageComponent(Window* window, bool forceLoad, bool dynamic) : G
 	mTargetIsMax(false), mTargetIsMin(false), mFlipX(false), mFlipY(false), mTargetSize(0, 0), mColorShift(0xFFFFFFFF),
 	mColorShiftEnd(0xFFFFFFFF), mColorGradientHorizontal(true), mForceLoad(forceLoad), mDynamic(dynamic),
 	mFadeOpacity(0), mFading(false), mRotateByTargetSize(false), mTopLeftCrop(0.0f, 0.0f), mBottomRightCrop(1.0f, 1.0f),
-	mFrameCols(1), mFrameRows(1), mFrameCount(0), mFrame(0), mFrameTime(0), mFrameRate(0.0f),
+	mFrameCols(1), mFrameRows(1), mFrameCount(0), mFrame(0), mFrameTime(0), mFrameIdle(-1), mFrameRate(0.0f),
+	mFramePlaying(true),
 	mAsyncPending(false)
 {
 	updateColors();
@@ -39,9 +40,12 @@ void ImageComponent::resize()
 	if(!mTexture)
 		return;
 
-	const Vector2f textureSize = mTexture->getSourceImageSize();
+	Vector2f textureSize = mTexture->getSourceImageSize();
 	if(textureSize == Vector2f::Zero())
 		return;
+	// BTV9: numa folha de quadros, o tamanho que conta é o de um quadro
+	if(mFrameCount > 0)
+		textureSize = Vector2f(textureSize.x() / mFrameCols, textureSize.y() / mFrameRows);
 
 	if(mTexture->isTiled())
 	{
@@ -122,6 +126,19 @@ void ImageComponent::resize()
 	mTexture->rasterizeAt((size_t)mSize.x(), (size_t)mSize.y());
 
 	onSizeChanged();
+}
+
+void ImageComponent::setFramePlaying(bool playing)
+{
+	if(playing == mFramePlaying)
+		return;
+	mFramePlaying = playing;
+	mFrameTime = 0;
+	if(mFrameCount > 0)
+	{
+		mFrame = (!playing && mFrameIdle >= 0) ? mFrameIdle : 0;
+		updateVertices();
+	}
 }
 
 void ImageComponent::onSizeChanged()
@@ -220,7 +237,7 @@ void ImageComponent::update(int deltaTime)
 {
 	GuiComponent::update(deltaTime);
 
-	if(mFrameCount > 1 && mFrameRate > 0.0f)
+	if(mFrameCount > 1 && mFrameRate > 0.0f && mFramePlaying)
 	{
 		const int periodo = (int)(1000.0f / mFrameRate);
 		mFrameTime += deltaTime;
@@ -528,7 +545,8 @@ void ImageComponent::applyTheme(const std::shared_ptr<ThemeData>& theme, const s
 		mFrameRows = std::max(1, (int)(grade.y() + 0.5f));
 		mFrameCount = std::min((int)(elem->get<float>("frameCount") + 0.5f), mFrameCols * mFrameRows);
 		mFrameRate = elem->has("frameRate") ? elem->get<float>("frameRate") : 0.0f;
-		mFrame = 0;
+		mFrameIdle = elem->has("frameIdle") ? std::min((int)(elem->get<float>("frameIdle") + 0.5f), mFrameCols * mFrameRows - 1) : -1;
+		mFrame = (!mFramePlaying && mFrameIdle >= 0) ? mFrameIdle : 0;
 		mFrameTime = 0;
 	}
 

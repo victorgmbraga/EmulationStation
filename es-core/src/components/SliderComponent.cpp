@@ -71,7 +71,7 @@ void SliderComponent::render(const Transform4x4f& parentTrans)
 
 	//render line
 	const float lineWidth = 2;
-	Renderer::drawRect(mKnob.getSize().x() / 2, mSize.y() / 2 - lineWidth / 2, width, lineWidth, 0x777777FF, 0x777777FF);
+	Renderer::drawRect(mKnob.getSize().x() / 2, mSize.y() / 2 - lineWidth / 2, width, lineWidth, 0xBCBEBCFF, 0xBCBEBCFF);
 
 	//render knob
 	mKnob.render(trans);
@@ -124,7 +124,7 @@ void SliderComponent::onValueChanged()
 		const std::string max = ss.str();
 
 		Vector2f textSize = mFont->sizeText(max);
-		mValueCache = std::shared_ptr<TextCache>(mFont->buildTextCache(val, mSize.x() - textSize.x(), (mSize.y() - textSize.y()) / 2, 0x777777FF));
+		mValueCache = std::shared_ptr<TextCache>(mFont->buildTextCache(val, mSize.x() - textSize.x(), (mSize.y() - textSize.y()) / 2, 0xBCBEBCFF));
 		mValueCache->metrics.size[0] = textSize.x(); // fudge the width
 	}
 

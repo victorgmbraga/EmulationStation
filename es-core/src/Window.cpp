@@ -3,6 +3,7 @@
 #include "components/HelpComponent.h"
 #include "components/ImageComponent.h"
 #include "resources/Font.h"
+#include "resources/ResourceManager.h"
 #include "resources/TextureResource.h"
 #include "Log.h"
 #include "Scripting.h"
@@ -128,13 +129,6 @@ void Window::input(InputConfig* config, Input input)
 	{
 		if(!mSleeping && !mRenderScreenSaver && peekGui() && peekGui()->input(config, input))
 			mTimeSinceLastInput = 0;
-		return;
-	}
-
-	if (mScreenSaver && mScreenSaver->isScreenSaverActive() && Settings::getInstance()->getBool("ScreenSaverControls")
-		&& mScreenSaver->inputDuringScreensaver(config, input))
-	{
-		mTimeSinceLastInput = 0;
 		return;
 	}
 
@@ -297,6 +291,26 @@ void Window::endLoadingScreen()
 
 void Window::renderLoadingScreen(std::string text, float percent, unsigned char opacity)
 {
+	// BTV9: se houver resources/splash.png, a tela de carregamento é só essa imagem em tela cheia,
+	// a mesma da inicialização do sistema (Plymouth)
+	if(!mLoadingScreen)
+	{
+		mFullscreenLoadingScreen = ResourceManager::getInstance()->fileExists(":/splash.png");
+		mLoadingScreen.reset(new ImageComponent(this, true));
+		mLoadingScreen->setImage(mFullscreenLoadingScreen ? ":/splash.png" : ":/splash.svg");
+	}
+	ImageComponent& splash = *mLoadingScreen;
+
+	if(mFullscreenLoadingScreen)
+	{
+		Renderer::beginDirectDraw();
+		splash.setResize((float)Renderer::getWindowWidth(), (float)Renderer::getWindowHeight());
+		splash.setPosition(0, 0);
+		splash.render(Transform4x4f::Identity());
+		Renderer::endDirectDraw();
+		return;
+	}
+
 	Transform4x4f trans = Transform4x4f::Identity();
 	Renderer::setMatrix(trans);
 	Renderer::drawRect(0.0f, 0.0f, Renderer::getScreenWidth(), Renderer::getScreenHeight(), 0x000000FF, 0x000000FF);
@@ -315,12 +329,6 @@ void Window::renderLoadingScreen(std::string text, float percent, unsigned char 
 		Renderer::drawRect(x, y, (w*percent), h, 0x006C9E00 | opacity, 0x006C9E00 | opacity); // 0xFFFFFFFF
 	}
 
-	if(!mLoadingScreen)
-	{
-		mLoadingScreen.reset(new ImageComponent(this, true));
-		mLoadingScreen->setImage(":/splash.svg");
-	}
-	ImageComponent& splash = *mLoadingScreen;
 	splash.setResize(Renderer::getScreenWidth() * 0.6f, 0.0f);
 	splash.setPosition((Renderer::getScreenWidth() - splash.getSize().x()) / 2, (Renderer::getScreenHeight() - splash.getSize().y()) / 2 * 0.6f);
 	splash.render(trans);

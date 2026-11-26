@@ -28,7 +28,11 @@ std::map<std::string, std::map<std::string, ThemeData::ElementPropertyType>> The
 		{ "colorEnd", COLOR },
 		{ "gradientType", STRING },
 		{ "visible", BOOLEAN },
-		{ "zIndex", FLOAT } } },
+		{ "zIndex", FLOAT },
+		{ "frameGrid", NORMALIZED_PAIR },   // BTV9: folha de quadros (colunas linhas)
+		{ "frameCount", FLOAT },
+		{ "frameRate", FLOAT },
+		{ "frameIdle", FLOAT } } },   // BTV9: quadro mostrado quando a animação está parada
 	{ "imagegrid", {
 		{ "pos", RESOLUTION_PAIR },
 		{ "size", RESOLUTION_PAIR },
@@ -665,7 +669,8 @@ std::map<std::string, ThemeSet> ThemeData::getThemeSets()
 
 		for(Utils::FileSystem::stringList::const_iterator it = dirContent.cbegin(); it != dirContent.cend(); ++it)
 		{
-			if(Utils::FileSystem::isDirectory(*it))
+			// BTV9: só o tema minui é usado
+			if(Utils::FileSystem::isDirectory(*it) && Utils::FileSystem::getFileName(*it) == "minui")
 			{
 				ThemeSet set = {*it};
 				sets[set.getName()] = set;

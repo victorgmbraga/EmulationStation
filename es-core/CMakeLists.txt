@@ -45,13 +45,12 @@ set(CORE_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/components/SwitchComponent.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/components/TextComponent.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/components/TextEditComponent.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/components/VideoComponent.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/components/VideoPlayerComponent.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/components/VideoVlcComponent.h
 
 	# Guis
 	${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiDetectDevice.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiInputConfig.h
+	${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiBusy.h
+	${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiKeyboard.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiMsgBox.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiTextEditPopup.h
 
@@ -121,13 +120,12 @@ set(CORE_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/src/components/SwitchComponent.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/components/TextComponent.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/components/TextEditComponent.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/components/VideoComponent.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/components/VideoPlayerComponent.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/components/VideoVlcComponent.cpp
 
 	# Guis
 	${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiDetectDevice.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiInputConfig.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiBusy.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiKeyboard.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiMsgBox.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/guis/GuiTextEditPopup.cpp
 

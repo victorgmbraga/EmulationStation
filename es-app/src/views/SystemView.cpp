@@ -56,6 +56,7 @@ void SystemView::populate()
 					logo->setMaxSize(mCarousel.logoSize * mCarousel.logoScale);
 					logo->applyTheme(theme, "system", "logo", ThemeFlags::PATH | ThemeFlags::COLOR);
 					logo->setRotateByTargetSize(true);
+					logo->setFramePlaying(false); // BTV9: só o logo selecionado anima (ver update)
 					e.data.logo = std::shared_ptr<GuiComponent>(logo);
 				}
 			}
@@ -183,13 +184,6 @@ bool SystemView::input(InputConfig* config, Input input)
 			ViewController::get()->goToGameList(getSelected());
 			return true;
 		}
-		if (config->isMappedTo("x", input))
-		{
-			// get random system
-			// go to system
-			setCursor(SystemData::getRandomSystem());
-			return true;
-		}
 	}else{
 		if(config->isMappedLike("left", input) ||
 			config->isMappedLike("right", input) ||
@@ -197,12 +191,6 @@ bool SystemView::input(InputConfig* config, Input input)
 			config->isMappedLike("down", input))
 			listInput(0);
 		Scripting::fireEvent("system-select", this->IList::getSelected()->getName(), "input");
-		if(!UIModeController::getInstance()->isUIModeKid() && config->isMappedTo("select", input) && Settings::getInstance()->getBool("ScreenSaverControls"))
-		{
-			mWindow->startScreenSaver();
-			mWindow->renderScreenSaver();
-			return true;
-		}
 	}
 
 	return GuiComponent::input(config, input);
@@ -211,6 +199,22 @@ bool SystemView::input(InputConfig* config, Input input)
 void SystemView::update(int deltaTime)
 {
 	listUpdate(deltaTime);
+	// BTV9: as imagens extras não são filhas da view; só as do sistema selecionado animam.
+	// O logo do carrossel também: o selecionado gira; os outros ficam parados no quadro frameIdle.
+	if(!mEntries.empty())
+	{
+		for(auto extra : mEntries.at(mCursor).data.backgroundExtras)
+			extra->update(deltaTime);
+		for(int i = 0; i < (int)mEntries.size(); i++)
+		{
+			ImageComponent* logo = dynamic_cast<ImageComponent*>(mEntries.at(i).data.logo.get());
+			if(!logo)
+				continue;
+			logo->setFramePlaying(i == mCursor);
+			if(i == mCursor)
+				logo->update(deltaTime);
+		}
+	}
 	GuiComponent::update(deltaTime);
 }
 
@@ -241,8 +245,7 @@ void SystemView::onCursorChanged(const CursorState& /*state*/)
 	cancelAnimation(1);
 	cancelAnimation(2);
 
-	std::string transition_style = Settings::getInstance()->getString("TransitionStyle");
-	bool goFast = transition_style == "instant";
+	const bool goFast = true; // BTV9: transição sempre instantânea
 	const float infoStartOpacity = mSystemInfo.getOpacity() / 255.f;
 
 	Animation* infoFadeOut = new LambdaAnimation(
@@ -280,65 +283,20 @@ void SystemView::onCursorChanged(const CursorState& /*state*/)
 
 	Animation* anim;
 	bool move_carousel = Settings::getInstance()->getBool("MoveCarousel");
-	if(transition_style == "fade")
+	// BTV9: transição sempre instantânea
+	anim = new LambdaAnimation(
+		[this, startPos, endPos, posMax, move_carousel ](float t)
 	{
-		float startExtrasFade = mExtrasFadeOpacity;
-		anim = new LambdaAnimation(
-			[this, startExtrasFade, startPos, endPos, posMax, move_carousel](float t)
-		{
-			t -= 1;
-			float f = Math::lerp(startPos, endPos, t*t*t + 1);
-			if(f < 0)
-				f += posMax;
-			if(f >= posMax)
-				f -= posMax;
+		t -= 1;
+		float f = Math::lerp(startPos, endPos, t*t*t + 1);
+		if(f < 0)
+			f += posMax;
+		if(f >= posMax)
+			f -= posMax;
 
-			this->mCamOffset = move_carousel ? f : endPos;
-
-			t += 1;
-			if(t < 0.3f)
-				this->mExtrasFadeOpacity = Math::lerp(0.0f, 1.0f, t / 0.3f + startExtrasFade);
-			else if(t < 0.7f)
-				this->mExtrasFadeOpacity = 1.0f;
-			else
-				this->mExtrasFadeOpacity = Math::lerp(1.0f, 0.0f, (t - 0.7f) / 0.3f);
-
-			if(t > 0.5f)
-				this->mExtrasCamOffset = endPos;
-
-		}, 500);
-	} else if (transition_style == "slide") {
-		// slide
-		anim = new LambdaAnimation(
-			[this, startPos, endPos, posMax, move_carousel](float t)
-		{
-			t -= 1;
-			float f = Math::lerp(startPos, endPos, t*t*t + 1);
-			if(f < 0)
-				f += posMax;
-			if(f >= posMax)
-				f -= posMax;
-
-			this->mCamOffset = move_carousel ? f : endPos;
-			this->mExtrasCamOffset = f;
-		}, 500);
-	} else {
-		// instant
-		anim = new LambdaAnimation(
-			[this, startPos, endPos, posMax, move_carousel ](float t)
-		{
-			t -= 1;
-			float f = Math::lerp(startPos, endPos, t*t*t + 1);
-			if(f < 0)
-				f += posMax;
-			if(f >= posMax)
-				f -= posMax;
-
-			this->mCamOffset = move_carousel ? f : endPos;
-			this->mExtrasCamOffset = endPos;
-		}, move_carousel ? 500 : 1);
-	}
-
+		this->mCamOffset = move_carousel ? f : endPos;
+		this->mExtrasCamOffset = endPos;
+	}, move_carousel ? 500 : 1);
 
 	setAnimation(anim, 0, nullptr, false, 0);
 }
@@ -381,10 +339,6 @@ std::vector<HelpPrompt> SystemView::getHelpPrompts()
 	else
 		prompts.push_back(HelpPrompt("left/right", "choose"));
 	prompts.push_back(HelpPrompt("a", "select"));
-	prompts.push_back(HelpPrompt("x", "random"));
-
-	if (!UIModeController::getInstance()->isUIModeKid() && Settings::getInstance()->getBool("ScreenSaverControls"))
-		prompts.push_back(HelpPrompt("select", "launch screensaver"));
 
 	return prompts;
 }
@@ -518,8 +472,8 @@ void SystemView::renderCarousel(const Transform4x4f& trans)
 		scale = Math::min(mCarousel.logoScale, Math::max(1.0f, scale));
 		scale /= mCarousel.logoScale;
 
-		int opacity = (int)Math::round(0x80 + ((0xFF - 0x80) * (1.0f - fabs(distance))));
-		opacity = Math::max((int) 0x80, opacity);
+		// BTV9: sem transparência nos logos de fora; o tema os diferencia (quadro frameIdle em preto e branco)
+		int opacity = 0xFF;
 
 		const std::shared_ptr<GuiComponent> &comp = mEntries.at(index).data.logo;
 		if (mCarousel.type == VERTICAL_WHEEL || mCarousel.type == HORIZONTAL_WHEEL) {

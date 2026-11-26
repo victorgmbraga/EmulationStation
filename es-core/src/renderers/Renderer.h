@@ -76,6 +76,8 @@ namespace Renderer
 	int         getScreenOffsetX();
 	int         getScreenOffsetY();
 	int         getScreenRotate ();
+	bool        isPixelMode     (); // BTV9: interface em baixa resolução ampliada sem suavização
+	int         getTargetHeight (); // altura do alvo de desenho (buffer interno no modo pixel)
 
 	// API specific
 	unsigned int convertColor      (const unsigned int _color);
@@ -95,6 +97,8 @@ namespace Renderer
 	void         setScissor        (const Rect& _scissor);
 	void         setSwapInterval   ();
 	void         swapBuffers       ();
+	void         beginDirectDraw   (); // BTV9: desenha na resolução real, fora do buffer do modo pixel
+	void         endDirectDraw     (); // BTV9: mostra o quadro desenhado direto e volta ao buffer
 
 } // Renderer::
 

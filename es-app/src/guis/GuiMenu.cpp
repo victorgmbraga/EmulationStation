@@ -7,8 +7,11 @@
 #include "guis/GuiDetectDevice.h"
 #include "guis/GuiGeneralScreensaverOptions.h"
 #include "guis/GuiMsgBox.h"
-#include "guis/GuiScraperStart.h"
 #include "guis/GuiSettings.h"
+#include "guis/GuiBusy.h"
+#include "guis/GuiWifi.h"
+#include "utils/FileSystemUtil.h"
+#include <fstream>
 #include "views/UIModeController.h"
 #include "views/ViewController.h"
 #include "CollectionSystemManager.h"
@@ -27,60 +30,22 @@ GuiMenu::GuiMenu(Window* window) : GuiComponent(window), mMenu(window, "MAIN MEN
 {
 	bool isFullUI = UIModeController::getInstance()->isUIModeFull();
 
+	// BTV9: sem menu de som (volume 100%, Master, sem sons de navegação — ver Settings::applyFixed)
 	if (isFullUI) {
-		addEntry("SCRAPER", 0x777777FF, true, [this] { openScraperSettings(); });
-		addEntry("SOUND SETTINGS", 0x777777FF, true, [this] { openSoundSettings(); });
-		addEntry("UI SETTINGS", 0x777777FF, true, [this] { openUISettings(); });
-		addEntry("GAME COLLECTION SETTINGS", 0x777777FF, true, [this] { openCollectionSystemSettings(); });
-		addEntry("OTHER SETTINGS", 0x777777FF, true, [this] { openOtherSettings(); });
-		addEntry("CONFIGURE INPUT", 0x777777FF, true, [this] { openConfigInput(); });
-	} else {
-		addEntry("SOUND SETTINGS", 0x777777FF, true, [this] { openSoundSettings(); });
+		addEntry("UI SETTINGS", 0xBCBEBCFF, true, [this] { openUISettings(); });
+		addEntry("GAME COLLECTION SETTINGS", 0xBCBEBCFF, true, [this] { openCollectionSystemSettings(); });
+		addEntry("OTHER SETTINGS", 0xBCBEBCFF, true, [this] { openOtherSettings(); });
+		addEntry("WI-FI", 0xBCBEBCFF, true, [this] { GuiWifi::open(mWindow); }); // BTV9
+		addEntry("PROCURAR ATUALIZAÇÕES", 0xBCBEBCFF, true, [this] { checkUpdate(mWindow); }); // BTV9
+		addEntry("CONFIGURE INPUT", 0xBCBEBCFF, true, [this] { openConfigInput(); });
 	}
 
-	addEntry("QUIT", 0x777777FF, true, [this] {openQuitMenu(); });
+	addEntry("QUIT", 0xBCBEBCFF, true, [this] {openQuitMenu(); });
 
 	addChild(&mMenu);
 	addVersionInfo();
 	setSize(mMenu.getSize());
 	setPosition((Renderer::getScreenWidth() - mSize.x()) / 2, Renderer::getScreenHeight() * 0.15f);
-}
-
-void GuiMenu::openScraperSettings()
-{
-	auto s = new GuiSettings(mWindow, "SCRAPER");
-
-	// scrape from
-	auto scraper_list = std::make_shared< OptionListComponent< std::string > >(mWindow, "SCRAPE FROM", false);
-	std::vector<std::string> scrapers = getScraperList();
-
-	// Select either the first entry of the one read from the settings, just in case the scraper from settings has vanished.
-	for(auto it = scrapers.cbegin(); it != scrapers.cend(); it++)
-		scraper_list->add(*it, *it, *it == Settings::getInstance()->getString("Scraper"));
-
-	s->addWithLabel("SCRAPE FROM", scraper_list);
-	s->addSaveFunc([scraper_list] { Settings::getInstance()->setString("Scraper", scraper_list->getSelected()); });
-
-	// scrape ratings
-	auto scrape_ratings = std::make_shared<SwitchComponent>(mWindow);
-	scrape_ratings->setState(Settings::getInstance()->getBool("ScrapeRatings"));
-	s->addWithLabel("SCRAPE RATINGS", scrape_ratings);
-	s->addSaveFunc([scrape_ratings] { Settings::getInstance()->setBool("ScrapeRatings", scrape_ratings->getState()); });
-
-	// scrape now
-	ComponentListRow row;
-	auto openScrapeNow = [this] { mWindow->pushGui(new GuiScraperStart(mWindow)); };
-	std::function<void()> openAndSave = openScrapeNow;
-	openAndSave = [s, openAndSave] { s->save(); openAndSave(); };
-	row.makeAcceptInputHandler(openAndSave);
-
-	auto scrape_now = std::make_shared<TextComponent>(mWindow, "SCRAPE NOW", Font::get(FONT_SIZE_MEDIUM), 0x777777FF);
-	auto bracket = makeArrow(mWindow);
-	row.addElement(scrape_now, true);
-	row.addElement(bracket, false);
-	s->addRow(row);
-
-	mWindow->pushGui(s);
 }
 
 void GuiMenu::openSoundSettings()
@@ -158,36 +123,6 @@ void GuiMenu::openSoundSettings()
 			}
 			Settings::getInstance()->setBool("EnableSounds", sounds_enabled->getState());
 		});
-
-		auto video_audio = std::make_shared<SwitchComponent>(mWindow);
-		video_audio->setState(Settings::getInstance()->getBool("VideoAudio"));
-		s->addWithLabel("ENABLE VIDEO AUDIO", video_audio);
-		s->addSaveFunc([video_audio] { Settings::getInstance()->setBool("VideoAudio", video_audio->getState()); });
-
-#ifdef _OMX_
-		// OMX player Audio Device
-		auto omx_audio_dev = std::make_shared< OptionListComponent<std::string> >(mWindow, "OMX PLAYER AUDIO DEVICE", false);
-		std::vector<std::string> omx_cards;
-		// RPi Specific  Audio Cards
-		omx_cards.push_back("local");
-		omx_cards.push_back("hdmi");
-		omx_cards.push_back("both");
-		omx_cards.push_back("alsa");
-		omx_cards.push_back("alsa:hw:0,0");
-		omx_cards.push_back("alsa:hw:1,0");
-		if (Settings::getInstance()->getString("OMXAudioDev") != "") {
-			if (std::find(omx_cards.begin(), omx_cards.end(), Settings::getInstance()->getString("OMXAudioDev")) == omx_cards.end()) {
-				omx_cards.push_back(Settings::getInstance()->getString("OMXAudioDev"));
-			}
-		}
-		for (auto it = omx_cards.cbegin(); it != omx_cards.cend(); it++)
-			omx_audio_dev->add(*it, *it, Settings::getInstance()->getString("OMXAudioDev") == *it);
-		s->addWithLabel("OMX PLAYER AUDIO DEVICE", omx_audio_dev);
-		s->addSaveFunc([omx_audio_dev] {
-			if (Settings::getInstance()->getString("OMXAudioDev") != omx_audio_dev->getSelected())
-				Settings::getInstance()->setString("OMXAudioDev", omx_audio_dev->getSelected());
-		});
-#endif
 	}
 
 	mWindow->pushGui(s);
@@ -198,134 +133,19 @@ void GuiMenu::openUISettings()
 {
 	auto s = new GuiSettings(mWindow, "UI SETTINGS");
 
-	//UI mode
-	auto UImodeSelection = std::make_shared< OptionListComponent<std::string> >(mWindow, "UI MODE", false);
-	std::vector<std::string> UImodes = UIModeController::getInstance()->getUIModes();
-	for (auto it = UImodes.cbegin(); it != UImodes.cend(); it++)
-		UImodeSelection->add(*it, *it, Settings::getInstance()->getString("UIMode") == *it);
-	s->addWithLabel("UI MODE", UImodeSelection);
+	// BTV9: modo de interface sempre "Full"
 	Window* window = mWindow;
-	s->addSaveFunc([ UImodeSelection, window]
-	{
-		std::string selectedMode = UImodeSelection->getSelected();
-		if (selectedMode != "Full")
-		{
-			std::string msg = "You are changing the UI to a restricted mode:\n" + selectedMode + "\n";
-			msg += "This will hide most menu-options to prevent changes to the system.\n";
-			msg += "To unlock and return to the full UI, enter this code: \n";
-			msg += "\"" + UIModeController::getInstance()->getFormattedPassKeyStr() + "\"\n\n";
-			msg += "Do you want to proceed?";
-			window->pushGui(new GuiMsgBox(window, msg,
-				"YES", [selectedMode] {
-					LOG(LogDebug) << "Setting UI mode to " << selectedMode;
-					Settings::getInstance()->setString("UIMode", selectedMode);
-					Settings::getInstance()->saveFile();
-			}, "NO",nullptr));
-		}
+
+	// BTV9: proteção de tela é sempre "escurecer"; só o tempo é ajustável (0 = nunca)
+	auto screensaver_time = std::make_shared<SliderComponent>(mWindow, 0.f, 30.f, 1.f, "m");
+	screensaver_time->setValue((float)(Settings::getInstance()->getInt("ScreenSaverTime") / Settings::ONE_MINUTE_IN_MS));
+	s->addWithLabel("DIM SCREEN AFTER", screensaver_time);
+	s->addSaveFunc([screensaver_time] {
+		Settings::getInstance()->setInt("ScreenSaverTime", (int)Math::round(screensaver_time->getValue()) * Settings::ONE_MINUTE_IN_MS);
+		PowerSaver::updateTimeouts();
 	});
 
-	// screensaver
-	ComponentListRow screensaver_row;
-	screensaver_row.elements.clear();
-	screensaver_row.addElement(std::make_shared<TextComponent>(mWindow, "SCREENSAVER SETTINGS", Font::get(FONT_SIZE_MEDIUM), 0x777777FF), true);
-	screensaver_row.addElement(makeArrow(mWindow), false);
-	screensaver_row.makeAcceptInputHandler(std::bind(&GuiMenu::openScreensaverOptions, this));
-	s->addRow(screensaver_row);
-
-	// quick system select (left/right in game list view)
-	auto quick_sys_select = std::make_shared<SwitchComponent>(mWindow);
-	quick_sys_select->setState(Settings::getInstance()->getBool("QuickSystemSelect"));
-	s->addWithLabel("QUICK SYSTEM SELECT", quick_sys_select);
-	s->addSaveFunc([quick_sys_select] { Settings::getInstance()->setBool("QuickSystemSelect", quick_sys_select->getState()); });
-
-	// carousel transition option
-	auto move_carousel = std::make_shared<SwitchComponent>(mWindow);
-	move_carousel->setState(Settings::getInstance()->getBool("MoveCarousel"));
-	s->addWithLabel("CAROUSEL TRANSITIONS", move_carousel);
-	s->addSaveFunc([move_carousel] {
-		if (move_carousel->getState()
-			&& !Settings::getInstance()->getBool("MoveCarousel")
-			&& PowerSaver::getMode() == PowerSaver::INSTANT)
-		{
-			Settings::getInstance()->setString("PowerSaverMode", "default");
-			PowerSaver::init();
-		}
-		Settings::getInstance()->setBool("MoveCarousel", move_carousel->getState());
-	});
-
-	// transition style
-	auto transition_style = std::make_shared< OptionListComponent<std::string> >(mWindow, "TRANSITION STYLE", false);
-	std::vector<std::string> transitions;
-	transitions.push_back("fade");
-	transitions.push_back("slide");
-	transitions.push_back("instant");
-	for(auto it = transitions.cbegin(); it != transitions.cend(); it++)
-		transition_style->add(*it, *it, Settings::getInstance()->getString("TransitionStyle") == *it);
-	s->addWithLabel("TRANSITION STYLE", transition_style);
-	s->addSaveFunc([transition_style] {
-		if (Settings::getInstance()->getString("TransitionStyle") == "instant"
-			&& transition_style->getSelected() != "instant"
-			&& PowerSaver::getMode() == PowerSaver::INSTANT)
-		{
-			Settings::getInstance()->setString("PowerSaverMode", "default");
-			PowerSaver::init();
-		}
-		Settings::getInstance()->setString("TransitionStyle", transition_style->getSelected());
-	});
-
-	// theme set
-	auto themeSets = ThemeData::getThemeSets();
-
-	if(!themeSets.empty())
-	{
-		std::map<std::string, ThemeSet>::const_iterator selectedSet = themeSets.find(Settings::getInstance()->getString("ThemeSet"));
-		if(selectedSet == themeSets.cend())
-			selectedSet = themeSets.cbegin();
-
-		auto theme_set = std::make_shared< OptionListComponent<std::string> >(mWindow, "THEME SET", false);
-		for(auto it = themeSets.cbegin(); it != themeSets.cend(); it++)
-			theme_set->add(it->first, it->first, it == selectedSet);
-		s->addWithLabel("THEME SET", theme_set);
-
-		Window* window = mWindow;
-		s->addSaveFunc([window, theme_set]
-		{
-			bool needReload = false;
-			std::string oldTheme = Settings::getInstance()->getString("ThemeSet");
-			if(oldTheme != theme_set->getSelected())
-				needReload = true;
-
-			Settings::getInstance()->setString("ThemeSet", theme_set->getSelected());
-
-			if(needReload)
-			{
-				Scripting::fireEvent("theme-changed", theme_set->getSelected(), oldTheme);
-				CollectionSystemManager::get()->updateSystemsList();
-				ViewController::get()->reloadAll(true); // TODO - replace this with some sort of signal-based implementation
-			}
-		});
-	}
-
-	// GameList view style
-	auto gamelist_style = std::make_shared< OptionListComponent<std::string> >(mWindow, "GAMELIST VIEW STYLE", false);
-	std::vector<std::string> styles;
-	styles.push_back("automatic");
-	styles.push_back("basic");
-	styles.push_back("detailed");
-	styles.push_back("video");
-	styles.push_back("grid");
-
-	for (auto it = styles.cbegin(); it != styles.cend(); it++)
-		gamelist_style->add(*it, *it, Settings::getInstance()->getString("GamelistViewStyle") == *it);
-	s->addWithLabel("GAMELIST VIEW STYLE", gamelist_style);
-	s->addSaveFunc([gamelist_style] {
-		bool needReload = false;
-		if (Settings::getInstance()->getString("GamelistViewStyle") != gamelist_style->getSelected())
-			needReload = true;
-		Settings::getInstance()->setString("GamelistViewStyle", gamelist_style->getSelected());
-		if (needReload)
-			ViewController::get()->reloadAll();
-	});
+	// BTV9: "troca rápida de sistema" e "transições do carrossel" sempre desligadas
 
 	// Optionally ignore leading articles when sorting game titles
 	auto ignore_articles = std::make_shared<SwitchComponent>(mWindow);
@@ -376,11 +196,7 @@ void GuiMenu::openUISettings()
 		Settings::getInstance()->setString("StartupSystem", systemfocus_list->getSelected());
 	});
 
-	// show help
-	auto show_help = std::make_shared<SwitchComponent>(mWindow);
-	show_help->setState(Settings::getInstance()->getBool("ShowHelpPrompts"));
-	s->addWithLabel("ON-SCREEN HELP", show_help);
-	s->addSaveFunc([show_help] { Settings::getInstance()->setBool("ShowHelpPrompts", show_help->getState()); });
+	// BTV9: ajuda na tela sempre ligada
 
 	// enable filters (ForceDisableFilters)
 	auto enable_filter = std::make_shared<SwitchComponent>(mWindow);
@@ -392,20 +208,7 @@ void GuiMenu::openUISettings()
 		if (enable_filter->getState() != filter_is_enabled) ViewController::get()->ReloadAndGoToStart();
 	});
 
-	// hide start menu in Kid and/or Kiosk Mode
-	auto disable_start = std::make_shared< OptionListComponent<std::string> >(mWindow, "DISABLE START MENU", false);
-	bool disableKid = Settings::getInstance()->getBool("DisableKidStartMenu");
-	bool disableKiosk = Settings::getInstance()->getBool("DisableKioskStartMenu");
-	disable_start->add("ALWAYS SHOW", "none", !disableKid && !disableKiosk);
-	disable_start->add("DISABLE IN KID MODE", "kid", disableKid && !disableKiosk);
-	disable_start->add("DISABLE IN KIOSK MODE", "kiosk", !disableKid && disableKiosk);
-	disable_start->add("DISABLE IN KID AND KIOSK MODES", "both", disableKid && disableKiosk);
-	s->addWithLabel("DISABLE START MENU", disable_start);
-	s->addSaveFunc([disable_start] {
-		std::string selected = disable_start->getSelected();
-		Settings::getInstance()->setBool("DisableKidStartMenu", selected == "kid" || selected == "both");
-		Settings::getInstance()->setBool("DisableKioskStartMenu", selected == "kiosk" || selected == "both");
-	});
+	// BTV9: sem modo infantil, a opção do menu Start nesse modo não se aplica
 
 	mWindow->pushGui(s);
 
@@ -421,27 +224,9 @@ void GuiMenu::openOtherSettings()
 	s->addWithLabel("VRAM LIMIT", max_vram);
 	s->addSaveFunc([max_vram] { Settings::getInstance()->setInt("MaxVRAM", (int)Math::round(max_vram->getValue())); });
 
-	// power saver
-	auto power_saver = std::make_shared< OptionListComponent<std::string> >(mWindow, "POWER SAVER MODES", false);
-	std::vector<std::string> modes;
-	modes.push_back("disabled");
-	modes.push_back("default");
-	modes.push_back("enhanced");
-	modes.push_back("instant");
-	for (auto it = modes.cbegin(); it != modes.cend(); it++)
-		power_saver->add(*it, *it, Settings::getInstance()->getString("PowerSaverMode") == *it);
-	s->addWithLabel("POWER SAVER MODES", power_saver);
-	s->addSaveFunc([this, power_saver] {
-		if (Settings::getInstance()->getString("PowerSaverMode") != "instant" && power_saver->getSelected() == "instant") {
-			Settings::getInstance()->setString("TransitionStyle", "instant");
-			Settings::getInstance()->setBool("MoveCarousel", false);
-			Settings::getInstance()->setBool("EnableSounds", false);
-		}
-		Settings::getInstance()->setString("PowerSaverMode", power_saver->getSelected());
-		PowerSaver::init();
-	});
+	// BTV9: modo de economia de energia sempre desligado
 
-	// gamelists
+	// gamelist saving
 	auto gamelistsSaveMode = std::make_shared< OptionListComponent<std::string> >(mWindow, "SAVE METADATA", false);
 	std::vector<std::string> saveModes;
 	saveModes.push_back("on exit");
@@ -465,42 +250,11 @@ void GuiMenu::openOtherSettings()
 	s->addWithLabel("ASYNC FILE IO", async_file_io);
 	s->addSaveFunc([async_file_io] { Settings::getInstance()->setBool("AsyncFileIO", async_file_io->getState()); });
 
-	auto local_art = std::make_shared<SwitchComponent>(mWindow);
-	local_art->setState(Settings::getInstance()->getBool("LocalArt"));
-	s->addWithLabel("SEARCH FOR LOCAL ART", local_art);
-	s->addSaveFunc([local_art] { Settings::getInstance()->setBool("LocalArt", local_art->getState()); });
-
 	// hidden files
 	auto hidden_files = std::make_shared<SwitchComponent>(mWindow);
 	hidden_files->setState(Settings::getInstance()->getBool("ShowHiddenFiles"));
 	s->addWithLabel("SHOW HIDDEN FILES", hidden_files);
 	s->addSaveFunc([hidden_files] { Settings::getInstance()->setBool("ShowHiddenFiles", hidden_files->getState()); });
-
-#ifdef _OMX_
-	// Video Player - VideoOmxPlayer
-	auto omx_player = std::make_shared<SwitchComponent>(mWindow);
-	omx_player->setState(Settings::getInstance()->getBool("VideoOmxPlayer"));
-	s->addWithLabel("USE OMX PLAYER (HW ACCELERATED)", omx_player);
-	s->addSaveFunc([omx_player]
-	{
-		// need to reload all views to re-create the right video components
-		bool needReload = false;
-		if(Settings::getInstance()->getBool("VideoOmxPlayer") != omx_player->getState())
-			needReload = true;
-
-		Settings::getInstance()->setBool("VideoOmxPlayer", omx_player->getState());
-
-		if(needReload)
-			ViewController::get()->reloadAll();
-	});
-
-#endif
-
-	// hidden files
-	auto background_indexing = std::make_shared<SwitchComponent>(mWindow);
-	background_indexing->setState(Settings::getInstance()->getBool("BackgroundIndexing"));
-	s->addWithLabel("INDEX FILES DURING SCREENSAVER", background_indexing);
-	s->addSaveFunc([background_indexing] { Settings::getInstance()->setBool("BackgroundIndexing", background_indexing->getState()); });
 
 	// framerate
 	auto framerate = std::make_shared<SwitchComponent>(mWindow);
@@ -550,7 +304,7 @@ void GuiMenu::openQuitMenu()
 		} else {
 			row.makeAcceptInputHandler(restart_es_fx);
 		}
-		row.addElement(std::make_shared<TextComponent>(window, "RESTART EMULATIONSTATION", Font::get(FONT_SIZE_MEDIUM), 0x777777FF), true);
+		row.addElement(std::make_shared<TextComponent>(window, "RESTART EMULATIONSTATION", Font::get(FONT_SIZE_MEDIUM), 0xBCBEBCFF), true);
 		s->addRow(row);
 
 		if(Settings::getInstance()->getBool("ShowExit"))
@@ -568,7 +322,7 @@ void GuiMenu::openQuitMenu()
 			} else {
 				row.makeAcceptInputHandler(quit_es_fx);
 			}
-			row.addElement(std::make_shared<TextComponent>(window, "QUIT EMULATIONSTATION", Font::get(FONT_SIZE_MEDIUM), 0x777777FF), true);
+			row.addElement(std::make_shared<TextComponent>(window, "QUIT EMULATIONSTATION", Font::get(FONT_SIZE_MEDIUM), 0xBCBEBCFF), true);
 			s->addRow(row);
 		}
 	}
@@ -589,7 +343,7 @@ void GuiMenu::openQuitMenu()
 	} else {
 		row.makeAcceptInputHandler(reboot_sys_fx);
 	}
-	row.addElement(std::make_shared<TextComponent>(window, "RESTART SYSTEM", Font::get(FONT_SIZE_MEDIUM), 0x777777FF), true);
+	row.addElement(std::make_shared<TextComponent>(window, "RESTART SYSTEM", Font::get(FONT_SIZE_MEDIUM), 0xBCBEBCFF), true);
 	s->addRow(row);
 
 	auto static shutdown_sys_fx = [] {
@@ -608,9 +362,92 @@ void GuiMenu::openQuitMenu()
 	} else {
 		row.makeAcceptInputHandler(shutdown_sys_fx);
 	}
-	row.addElement(std::make_shared<TextComponent>(window, "SHUTDOWN SYSTEM", Font::get(FONT_SIZE_MEDIUM), 0x777777FF), true);
+	row.addElement(std::make_shared<TextComponent>(window, "SHUTDOWN SYSTEM", Font::get(FONT_SIZE_MEDIUM), 0xBCBEBCFF), true);
 	s->addRow(row);
 	mWindow->pushGui(s);
+}
+
+// BTV9: procura atualizações de tudo (/opt/btv9/es-update.sh): o EmulationStation (releases do GitHub)
+// e os pacotes do Debian/Armbian (apt). O kernel, o device tree e o u-boot ficam de fora.
+#define UPDATE_SCRIPT "/opt/btv9/es-update.sh"
+
+static void finishUpdate(Window* window, bool esReady, bool reboot)
+{
+	if(reboot)
+		window->pushGui(new GuiMsgBox(window, "O SISTEMA PRECISA SER REINICIADO PARA CONCLUIR A ATUALIZAÇÃO.\nREINICIAR O APARELHO AGORA?",
+			"SIM", [] { btv9RunRoot(UPDATE_SCRIPT, { "reboot" }); }, "DEPOIS", nullptr));
+	else if(esReady)
+		window->pushGui(new GuiMsgBox(window, "REINICIAR O EMULATIONSTATION AGORA PARA INSTALAR A VERSÃO NOVA?",
+			"SIM", [] { btv9RunRoot(UPDATE_SCRIPT, { "restart" }); }, "DEPOIS", nullptr));
+}
+
+static void installSystem(Window* window, bool esReady)
+{
+	window->pushGui(new GuiBusy(window, "INSTALANDO PACOTES DO SISTEMA",
+		[] { return btv9RunRoot(UPDATE_SCRIPT, { "system" }); },
+		[window, esReady](const std::string& out) {
+			bool ok = out.compare(0, 2, "OK") == 0;
+			bool reboot = out.find("REINICIAR") != std::string::npos;
+			if(!ok)
+				window->pushGui(new GuiMsgBox(window, "NÃO FOI POSSÍVEL ATUALIZAR OS PACOTES DO SISTEMA.", "OK",
+					[window, esReady, reboot] { finishUpdate(window, esReady, reboot); }));
+			else if(!reboot && !esReady)
+				window->pushGui(new GuiMsgBox(window, "PACOTES DO SISTEMA ATUALIZADOS."));
+			else
+				finishUpdate(window, esReady, reboot);
+		}));
+}
+
+void GuiMenu::checkUpdate(Window* window)
+{
+	window->pushGui(new GuiBusy(window, "PROCURANDO ATUALIZAÇÕES",
+		[] { return btv9RunRoot(UPDATE_SCRIPT, { "menu" }); },
+		[window](const std::string& out) {
+			// linhas "ES PRONTA|ATUAL|ERRO <versão>" e "PACOTES <n>|ERRO"
+			std::string esState = "ERRO", esVer, pkgs = "ERRO";
+			size_t start = 0;
+			while(start < out.size())
+			{
+				size_t end = out.find('\n', start);
+				if(end == std::string::npos)
+					end = out.size();
+				std::string line = out.substr(start, end - start);
+				start = end + 1;
+				if(line.compare(0, 3, "ES ") == 0)
+				{
+					std::string rest = line.substr(3);
+					esState = rest.substr(0, rest.find(' '));
+					esVer = rest.find(' ') == std::string::npos ? "" : Utils::String::toUpper(rest.substr(rest.find(' ') + 1));
+				}
+				else if(line.compare(0, 8, "PACOTES ") == 0)
+					pkgs = line.substr(8);
+			}
+
+			bool esReady = esState == "PRONTA";
+			int nPkgs = pkgs == "ERRO" ? 0 : atoi(pkgs.c_str());
+			std::string esText = esReady ? "EMULATIONSTATION: VERSÃO NOVA " + esVer
+				: esState == "ATUAL" ? "EMULATIONSTATION: EM DIA (" + esVer + ")"
+				: "EMULATIONSTATION: NÃO FOI POSSÍVEL VERIFICAR";
+			std::string pkgText = pkgs == "ERRO" ? "SISTEMA: NÃO FOI POSSÍVEL VERIFICAR"
+				: nPkgs == 0 ? "SISTEMA: EM DIA"
+				: "SISTEMA: " + std::to_string(nPkgs) + (nPkgs == 1 ? " PACOTE A ATUALIZAR" : " PACOTES A ATUALIZAR");
+
+			if(!esReady && nPkgs == 0)
+			{
+				bool failed = esState == "ERRO" || pkgs == "ERRO";
+				window->pushGui(new GuiMsgBox(window, esText + "\n" + pkgText +
+					(failed ? "\nVERIFIQUE A CONEXÃO COM A INTERNET." : "")));
+				return;
+			}
+			window->pushGui(new GuiMsgBox(window, esText + "\n" + pkgText + "\nINSTALAR AGORA?",
+				"SIM", [window, esReady, nPkgs] {
+					if(nPkgs > 0)
+						installSystem(window, esReady);
+					else
+						btv9RunRoot(UPDATE_SCRIPT, { "restart" });
+				},
+				"DEPOIS", nullptr));
+		}));
 }
 
 void GuiMenu::addVersionInfo()
@@ -619,7 +456,13 @@ void GuiMenu::addVersionInfo()
 
 	mVersion.setFont(Font::get(FONT_SIZE_SMALL));
 	mVersion.setColor(0x5E5E5EFF);
-	mVersion.setText("EMULATIONSTATION V" + Utils::String::toUpper(PROGRAM_VERSION_STRING) + buildDate);
+	// BTV9: versão do release instalado (arquivo VERSION ao lado do executável)
+	std::string release;
+	std::ifstream vf(Utils::FileSystem::getExePath() + "/VERSION");
+	if(vf && std::getline(vf, release) && !release.empty())
+		mVersion.setText("EMULATIONSTATION " + Utils::String::toUpper(release) + buildDate);
+	else
+		mVersion.setText("EMULATIONSTATION V" + Utils::String::toUpper(PROGRAM_VERSION_STRING) + buildDate);
 	mVersion.setHorizontalAlignment(ALIGN_CENTER);
 	addChild(&mVersion);
 }

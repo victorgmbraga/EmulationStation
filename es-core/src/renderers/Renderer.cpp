@@ -23,6 +23,7 @@ namespace Renderer
 	static int              screenOffsetX      = 0;
 	static int              screenOffsetY      = 0;
 	static int              screenRotate       = 0;
+	static bool             pixelMode          = false;
 	static bool             initialCursorState = 1;
 
 //////////////////////////////////////////////////////////////////////////
@@ -90,6 +91,20 @@ namespace Renderer
 		screenOffsetX = Settings::getInstance()->getInt("ScreenOffsetX") ? Settings::getInstance()->getInt("ScreenOffsetX") : 0;
 		screenOffsetY = Settings::getInstance()->getInt("ScreenOffsetY") ? Settings::getInstance()->getInt("ScreenOffsetY") : 0;
 		screenRotate  = Settings::getInstance()->getInt("ScreenRotate")  ? Settings::getInstance()->getInt("ScreenRotate")  : 0;
+
+		// BTV9: modo pixel. A interface é desenhada num buffer de PixelHeight linhas
+		// (largura proporcional à tela) e ampliada por um fator inteiro sem suavização.
+		const int pixelHeight = Settings::getInstance()->getInt("PixelHeight");
+		if(pixelHeight > 0 && pixelHeight < windowHeight && !Settings::getInstance()->getInt("ScreenWidth") && !Settings::getInstance()->getInt("ScreenHeight"))
+		{
+			pixelMode     = true;
+			screenHeight  = pixelHeight;
+			screenWidth   = ((int)(pixelHeight * (float)windowWidth / (float)windowHeight + 0.5f) + 1) & ~1;
+			screenOffsetX = 0;
+			screenOffsetY = 0;
+			screenRotate  = 0;
+			LOG(LogInfo) << "Pixel mode: " << screenWidth << "x" << screenHeight << " -> " << windowWidth << "x" << windowHeight;
+		}
 
 		setupWindow();
 
@@ -290,5 +305,7 @@ namespace Renderer
 	int         getScreenOffsetX() { return screenOffsetX; }
 	int         getScreenOffsetY() { return screenOffsetY; }
 	int         getScreenRotate()  { return screenRotate; }
+	bool        isPixelMode()      { return pixelMode; }
+	int         getTargetHeight()  { return pixelMode ? screenHeight : windowHeight; }
 
 } // Renderer::

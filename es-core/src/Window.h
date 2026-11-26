@@ -30,9 +30,7 @@ public:
 		virtual bool allowSleep() = 0;
 		virtual void update(int deltaTime) = 0;
 		virtual bool isScreenSaverActive() = 0;
-		virtual FileData* getCurrentGame() = 0;
-		virtual void selectGame(bool launch) = 0;
-		virtual bool inputDuringScreensaver(InputConfig* config, Input input) = 0;
+		virtual ~ScreenSaver() {}
 	};
 
 	class InfoPopup {
@@ -90,6 +88,7 @@ private:
 	HelpComponent*	mHelp;
 	ImageComponent* mBackgroundOverlay;
 	std::unique_ptr<ImageComponent> mLoadingScreen;
+	bool mFullscreenLoadingScreen = false;
 	ScreenSaver*	mScreenSaver;
 	InfoPopup*	mInfoPopup;
 	bool		mRenderScreenSaver;

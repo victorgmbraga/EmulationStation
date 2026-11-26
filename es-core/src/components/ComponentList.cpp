@@ -195,18 +195,10 @@ void ComponentList::render(const Transform4x4f& parentTrans)
 	// draw selector bar
 	if(mFocused)
 	{
-		// inversion: src * (1 - dst) + dst * 0 = where src = 1
-		// need a function that goes roughly 0x777777 -> 0xFFFFFF
-		// and 0xFFFFFF -> 0x777777
-		// (1 - dst) + 0x77
-
+		// BTV9: barra somada ao que já foi desenhado: o fundo preto vira 0x3A3D3A
+		// (a mesma barra do tema) e o texto 0xBCBEBC fica quase branco
 		const float selectedRowHeight = getRowHeight(mEntries.at(mCursor).data);
-		Renderer::drawRect(0.0f, mSelectorBarOffset, mSize.x(), selectedRowHeight, 0xFFFFFFFF, 0xFFFFFFFF, false, Renderer::Blend::ONE_MINUS_DST_COLOR, Renderer::Blend::ZERO);
-		Renderer::drawRect(0.0f, mSelectorBarOffset, mSize.x(), selectedRowHeight, 0x777777FF, 0x777777FF, false, Renderer::Blend::ONE,                 Renderer::Blend::ONE);
-
-		// hack to draw 2px dark on left/right of the bar
-		Renderer::drawRect(0.0f, mSelectorBarOffset, 2.0f, selectedRowHeight, 0x878787FF, 0x878787FF);
-		Renderer::drawRect(mSize.x() - 2.0f, mSelectorBarOffset, 2.0f, selectedRowHeight, 0x878787FF, 0x878787FF);
+		Renderer::drawRect(0.0f, mSelectorBarOffset, mSize.x(), selectedRowHeight, 0x3A3D3AFF, 0x3A3D3AFF, false, Renderer::Blend::ONE, Renderer::Blend::ONE);
 
 		for(auto it = drawAfterCursor.cbegin(); it != drawAfterCursor.cend(); it++)
 			(*it)->render(trans);
@@ -216,14 +208,7 @@ void ComponentList::render(const Transform4x4f& parentTrans)
 			Renderer::setMatrix(trans);
 	}
 
-	// draw separators
-	float y = 0;
-	for(unsigned int i = 0; i < mEntries.size(); i++)
-	{
-		Renderer::drawRect(0.0f, y, mSize.x(), 1.0f, 0xC6C7C6FF, 0xC6C7C6FF);
-		y += getRowHeight(mEntries.at(i).data);
-	}
-	Renderer::drawRect(0.0f, y, mSize.x(), 1.0f, 0xC6C7C6FF, 0xC6C7C6FF);
+	// BTV9: sem linhas separadoras
 
 	Renderer::popClipRect();
 }
@@ -237,6 +222,10 @@ float ComponentList::getRowHeight(const ComponentListRow& row) const
 		if(row.elements.at(i).component->getSize().y() > height)
 			height = row.elements.at(i).component->getSize().y();
 	}
+
+	// BTV9: no modo pixel cada linha ganha 8 px de folga (a fonte de 8 px fica apertada)
+	if(Renderer::isPixelMode())
+		height += 8.0f;
 
 	return height;
 }

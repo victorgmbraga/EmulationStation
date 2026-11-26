@@ -48,7 +48,7 @@ private:
 			for(auto it = mParent->mEntries.begin(); it != mParent->mEntries.end(); it++)
 			{
 				row.elements.clear();
-				row.addElement(std::make_shared<TextComponent>(mWindow, Utils::String::toUpper(it->name), font, 0x777777FF), true);
+				row.addElement(std::make_shared<TextComponent>(mWindow, Utils::String::toUpper(it->name), font, 0xBCBEBCFF), true);
 
 				OptionListData& e = *it;
 
@@ -57,7 +57,7 @@ private:
 					// add checkbox
 					auto checkbox = std::make_shared<ImageComponent>(mWindow);
 					checkbox->setImage(it->selected ? CHECKED_PATH : UNCHECKED_PATH);
-					checkbox->setResize(0, font->getLetterHeight());
+					checkbox->setResize(0, Renderer::isPixelMode() ? 8.0f : font->getLetterHeight()); // BTV9
 					row.addElement(checkbox, false);
 
 					// input handler
@@ -139,7 +139,7 @@ public:
 	{
 		auto font = Font::get(FONT_SIZE_MEDIUM, FONT_PATH_LIGHT);
 		mText.setFont(font);
-		mText.setColor(0x777777FF);
+		mText.setColor(0xBCBEBCFF);
 		mText.setHorizontalAlignment(ALIGN_CENTER);
 		addChild(&mText);
 

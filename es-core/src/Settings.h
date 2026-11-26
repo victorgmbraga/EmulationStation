@@ -35,6 +35,7 @@ private:
 
 	void setDefaults();		//Clear everything and load default values.
 	void processBackwardCompatibility();
+	void applyFixed(); // BTV9: opções fixas, sem escolha no menu
 	template<typename Map>
 	void renameSetting(Map& map, std::string&& oldName, std::string&& newName);
 

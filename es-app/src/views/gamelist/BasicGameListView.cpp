@@ -1,14 +1,18 @@
 #include "views/gamelist/BasicGameListView.h"
 
+#include "renderers/Renderer.h"
 #include "utils/FileSystemUtil.h"
 #include "views/UIModeController.h"
 #include "views/ViewController.h"
 #include "CollectionSystemManager.h"
 #include "Settings.h"
 #include "SystemData.h"
+#include <algorithm>
+#include <cmath>
 
 BasicGameListView::BasicGameListView(Window* window, FileData* root)
-	: ISimpleGameListView(window, root), mList(window)
+	: ISimpleGameListView(window, root), mList(window), mImage(window, false, false),
+	  mImageBoxPos(0, 0), mImageBoxSize(0, 0)
 {
 	mList.setSize(mSize.x(), mSize.y() * 0.8f);
 	mList.setPosition(0, mSize.y() * 0.2f);
@@ -18,7 +22,56 @@ BasicGameListView::BasicGameListView(Window* window, FileData* root)
 	});
 	addChild(&mList);
 
+	mImage.setDefaultZIndex(30);
+	mImage.setVisible(false);
+	addChild(&mImage);
+	mList.setCursorChangedCallback([&](const CursorState& /*state*/) { updateGameImage(); });
+
 	populateList(root->getChildrenListToDisplay());
+}
+
+// BTV9: a imagem só aparece se o tema definir md_image (pos e size = área disponível). A escala é inteira
+// (ou 1/n quando a imagem é maior que a área) e a posição cai em pixel inteiro: no modo pixel, cada pixel
+// da tela do jogo vira um bloco do mesmo tamanho.
+void BasicGameListView::updateGameImage()
+{
+	FileData* file = (mList.size() == 0 || mList.isScrolling()) ? nullptr : mList.getSelected();
+	std::string path;
+	if(file && file->getType() == GAME && mImageBoxSize.x() > 0 && mImageBoxSize.y() > 0)
+	{
+		const std::string rom = file->getSourceFileData()->getPath();
+		const std::string candidate = Utils::FileSystem::getParent(rom) + "/media/" + Utils::FileSystem::getStem(rom) + ".png";
+		if(Utils::FileSystem::exists(candidate))
+			path = candidate;
+	}
+	if(path == mImagePath)
+		return;
+	mImagePath = path;
+	if(path.empty())
+	{
+		mImage.setVisible(false);
+		return;
+	}
+
+	mImage.setImage(path);
+	const Vector2i tex = mImage.getTextureSize();
+	if(tex.x() <= 0 || tex.y() <= 0)
+	{
+		mImage.setVisible(false);
+		return;
+	}
+	float scale;
+	const float fit = std::min(mImageBoxSize.x() / tex.x(), mImageBoxSize.y() / tex.y());
+	if(fit >= 1.0f)
+		scale = std::floor(fit);
+	else
+		scale = 1.0f / std::ceil(1.0f / fit);
+	const float w = std::floor(tex.x() * scale), h = std::floor(tex.y() * scale);
+	mImage.setResize(w, h);
+	mImage.setOrigin(0, 0);
+	mImage.setPosition(std::floor(mImageBoxPos.x() + (mImageBoxSize.x() - w) / 2.0f),
+	                   std::floor(mImageBoxPos.y() + (mImageBoxSize.y() - h) / 2.0f));
+	mImage.setVisible(true);
 }
 
 void BasicGameListView::onThemeChanged(const std::shared_ptr<ThemeData>& theme)
@@ -26,6 +79,19 @@ void BasicGameListView::onThemeChanged(const std::shared_ptr<ThemeData>& theme)
 	ISimpleGameListView::onThemeChanged(theme);
 	using namespace ThemeFlags;
 	mList.applyTheme(theme, getName(), "gamelist", ALL);
+
+	mImageBoxSize = Vector2f(0, 0);
+	const ThemeData::ThemeElement* elem = theme->getElement(getName(), "md_image", "image");
+	if(elem && elem->has("pos") && elem->has("size"))
+	{
+		const Vector2f screen((float)Renderer::getScreenWidth(), (float)Renderer::getScreenHeight());
+		mImageBoxPos = elem->get<Vector2f>("pos") * screen;
+		mImageBoxSize = elem->get<Vector2f>("size") * screen;
+	}
+	if(elem && elem->has("zIndex"))
+		mImage.setZIndex(elem->get<float>("zIndex"));
+	mImagePath = "-";   // força recarregar com a área nova
+	updateGameImage();
 
 	sortChildren();
 }
@@ -136,53 +202,7 @@ void BasicGameListView::launch(FileData* game)
 void BasicGameListView::remove(FileData *game, bool deleteFile, bool refreshView)
 {
 	if (deleteFile)
-	{
 		Utils::FileSystem::removeFile(game->getPath());  // actually delete the file on the filesystem
-
-		// we want to delete related/scraped files, but check first if resources are shared with another game
-		bool keepVideo     = game->getVideoPath().empty();
-		bool keepMarquee   = game->getMarqueePath().empty();
-		bool keepThumbnail = game->getThumbnailPath().empty();
-		bool keepImage     = game->getImagePath().empty();
-
-		for (auto system : SystemData::sSystemVector)
-		{
-			// skip checking if we determined we need to keep the resources
-			if (keepVideo && keepMarquee && keepImage && keepThumbnail)
-				break;
-
-			if (!system->isGameSystem() || system->isCollection())
-				continue;
-
-			for (auto entry : system->getRootFolder()->getChildren()) {
-				if (entry == game) // skip the game's own entry
-					continue;
-
-				if (!keepVideo && (game->getVideoPath() == entry->getVideoPath()))
-					keepVideo = true;
-
-				if (!keepMarquee && (game->getMarqueePath() == entry->getMarqueePath()))
-					keepMarquee = true;
-
-				// Thumbnail/Image can be used inter-changeably, so check for both in game's resources
-				if (!keepThumbnail && (game->getThumbnailPath() == entry->getThumbnailPath() || game->getThumbnailPath() == entry->getImagePath()))
-					keepThumbnail = true;
-
-				if (!keepImage && (game->getImagePath() == entry->getImagePath() || game->getImagePath() == entry->getThumbnailPath()))
-					keepImage = true;
-			}
-		}
-
-		// delete the resources that are not shared
-		if (!keepVideo)
-			Utils::FileSystem::removeFile(game->getVideoPath());
-		if (!keepImage)
-			Utils::FileSystem::removeFile(game->getImagePath());
-		if (!keepThumbnail)
-			Utils::FileSystem::removeFile(game->getThumbnailPath());
-		if (!keepMarquee)
-			Utils::FileSystem::removeFile(game->getMarqueePath());
-	}
 	FileData* parent = game->getParent();
 	if (getCursor() == game)                     // Select next element in list, or prev if none
 	{
@@ -220,8 +240,6 @@ std::vector<HelpPrompt> BasicGameListView::getHelpPrompts()
 	prompts.push_back(HelpPrompt("b", "back"));
 	if(!UIModeController::getInstance()->isUIModeKid())
 		prompts.push_back(HelpPrompt("select", "options"));
-	if(mRoot->getSystem()->isGameSystem())
-		prompts.push_back(HelpPrompt("x", "random"));
 	if(mRoot->getSystem()->isGameSystem() && !UIModeController::getInstance()->isUIModeKid())
 	{
 		std::string prompt = CollectionSystemManager::get()->getEditingCollection();

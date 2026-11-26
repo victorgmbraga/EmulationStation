@@ -14,11 +14,10 @@
 #include "MameNames.h"
 #include "platform.h"
 #include "PowerSaver.h"
-#include "ScraperCmdLine.h"
 #include "Settings.h"
 #include "SystemData.h"
 #include "SystemScreenSaver.h"
-#include "components/VideoVlcComponent.h"
+#include "VolumeControl.h"
 #include <SDL_events.h>
 #include <SDL_main.h>
 #include <SDL_timer.h>
@@ -30,7 +29,6 @@
 
 #include <FreeImage.h>
 
-bool scrape_cmdline = false;
 
 bool parseArgs(int argc, char* argv[])
 {
@@ -152,9 +150,6 @@ bool parseArgs(int argc, char* argv[])
 			bool vsync = (strcmp(argv[i + 1], "on") == 0 || strcmp(argv[i + 1], "1") == 0) ? true : false;
 			Settings::getInstance()->setBool("VSync", vsync);
 			i++; // skip vsync value
-		}else if(strcmp(argv[i], "--scrape") == 0)
-		{
-			scrape_cmdline = true;
 		}else if(strcmp(argv[i], "--max-vram") == 0)
 		{
 			int maxVRAM = atoi(argv[i + 1]);
@@ -227,8 +222,7 @@ bool parseArgs(int argc, char* argv[])
 				"--home PATH                    directory to use as home folder for\n"
 				"                               .emulationstation/es_settings.cfg, aso.\n"
 				"                               Subfolder .emulationstation/ will be created.\n"
-				"\nScrape mode:\n"
-				"--scrape                       scrape using command line interface\n\n"
+				"\n"
 				"Note: Switches marked (p) will be persisted in es_settings.cfg when any\n"
 				"setting is changed via EmulationStation UI.\n\n"
 				"Please refer to the online documentation for additional information:\n"
@@ -358,19 +352,19 @@ int main(int argc, char* argv[])
 
 	bool splashScreen = Settings::getInstance()->getBool("SplashScreen");
 
-	if(!scrape_cmdline)
+	if(!window.init())
 	{
-		if(!window.init())
-		{
-			LOG(LogError) << "Window failed to initialize!";
-			return 1;
-		}
+		LOG(LogError) << "Window failed to initialize!";
+		return 1;
+	}
 
-		if (splashScreen)
-		{
-			std::string progressText = "Loading system config...";
-			window.renderLoadingScreen(progressText);
-		}
+	// BTV9: volume do sistema sempre em 100% (não há mais ajuste no menu)
+	VolumeControl::getInstance()->setVolume(100);
+
+	if (splashScreen)
+	{
+		std::string progressText = "Loading system config...";
+		window.renderLoadingScreen(progressText);
 	}
 
 	const char* errorMsg = NULL;
@@ -380,8 +374,7 @@ int main(int argc, char* argv[])
 		if(errorMsg == NULL)
 		{
 			LOG(LogError) << "Unknown error occured while parsing system config file.";
-			if(!scrape_cmdline)
-				window.deinit();
+			window.deinit();
 			return 1;
 		}
 
@@ -393,12 +386,6 @@ int main(int argc, char* argv[])
 				quit->type = SDL_QUIT;
 				SDL_PushEvent(quit);
 			}));
-	}
-
-	//run the command line scraper then quit
-	if(scrape_cmdline)
-	{
-		return run_scraper_cmdline();
 	}
 
 	// preload what we can right away instead of waiting for the user to select it
@@ -484,11 +471,6 @@ int main(int argc, char* argv[])
 
 	InputManager::getInstance()->deinit();
 	window.deinit();
-
-	// Join the VLC cleanup worker and release the VLC instance. Must happen after
-	// window.deinit() so all VideoVlcComponents are destroyed and their final
-	// stopVideo() cleanup tasks are already posted to the queue.
-	VideoVlcComponent::deinit();
 
 	MameNames::deinit();
 	CollectionSystemManager::deinit();

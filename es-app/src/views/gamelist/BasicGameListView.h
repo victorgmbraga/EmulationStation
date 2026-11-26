@@ -2,6 +2,7 @@
 #ifndef ES_APP_VIEWS_GAME_LIST_BASIC_GAME_LIST_VIEW_H
 #define ES_APP_VIEWS_GAME_LIST_BASIC_GAME_LIST_VIEW_H
 
+#include "components/ImageComponent.h"
 #include "components/TextListComponent.h"
 #include "views/gamelist/ISimpleGameListView.h"
 
@@ -35,6 +36,14 @@ protected:
 	virtual void addPlaceholder();
 
 	TextListComponent<FileData*> mList;
+
+private:
+	// BTV9: tela do jogo à direita da lista (<pasta da ROM>/media/<nome>.png), em escala inteira
+	void updateGameImage();
+	ImageComponent mImage;
+	Vector2f mImageBoxPos;
+	Vector2f mImageBoxSize;
+	std::string mImagePath;
 };
 
 #endif // ES_APP_VIEWS_GAME_LIST_BASIC_GAME_LIST_VIEW_H

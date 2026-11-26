@@ -5,6 +5,7 @@
 #include "Settings.h"
 #include "ThemeData.h"
 #include <SDL_timer.h>
+#include <algorithm>
 
 Vector2i ImageComponent::getTextureSize() const
 {
@@ -23,6 +24,8 @@ ImageComponent::ImageComponent(Window* window, bool forceLoad, bool dynamic) : G
 	mTargetIsMax(false), mTargetIsMin(false), mFlipX(false), mFlipY(false), mTargetSize(0, 0), mColorShift(0xFFFFFFFF),
 	mColorShiftEnd(0xFFFFFFFF), mColorGradientHorizontal(true), mForceLoad(forceLoad), mDynamic(dynamic),
 	mFadeOpacity(0), mFading(false), mRotateByTargetSize(false), mTopLeftCrop(0.0f, 0.0f), mBottomRightCrop(1.0f, 1.0f),
+	mFrameCols(1), mFrameRows(1), mFrameCount(0), mFrame(0), mFrameTime(0), mFrameIdle(-1), mFrameRate(0.0f),
+	mFramePlaying(true),
 	mAsyncPending(false)
 {
 	updateColors();
@@ -37,9 +40,12 @@ void ImageComponent::resize()
 	if(!mTexture)
 		return;
 
-	const Vector2f textureSize = mTexture->getSourceImageSize();
+	Vector2f textureSize = mTexture->getSourceImageSize();
 	if(textureSize == Vector2f::Zero())
 		return;
+	// BTV9: numa folha de quadros, o tamanho que conta é o de um quadro
+	if(mFrameCount > 0)
+		textureSize = Vector2f(textureSize.x() / mFrameCols, textureSize.y() / mFrameRows);
 
 	if(mTexture->isTiled())
 	{
@@ -120,6 +126,19 @@ void ImageComponent::resize()
 	mTexture->rasterizeAt((size_t)mSize.x(), (size_t)mSize.y());
 
 	onSizeChanged();
+}
+
+void ImageComponent::setFramePlaying(bool playing)
+{
+	if(playing == mFramePlaying)
+		return;
+	mFramePlaying = playing;
+	mFrameTime = 0;
+	if(mFrameCount > 0)
+	{
+		mFrame = (!playing && mFrameIdle >= 0) ? mFrameIdle : 0;
+		updateVertices();
+	}
 }
 
 void ImageComponent::onSizeChanged()
@@ -217,6 +236,18 @@ void ImageComponent::setImageAsync(std::string path, bool tile)
 void ImageComponent::update(int deltaTime)
 {
 	GuiComponent::update(deltaTime);
+
+	if(mFrameCount > 1 && mFrameRate > 0.0f && mFramePlaying)
+	{
+		const int periodo = (int)(1000.0f / mFrameRate);
+		mFrameTime += deltaTime;
+		if(mFrameTime >= periodo)
+		{
+			mFrame = (mFrame + mFrameTime / periodo) % mFrameCount;
+			mFrameTime %= periodo;
+			updateVertices();
+		}
+	}
 
 	if(mAsyncPending && mTexture)
 	{
@@ -353,6 +384,17 @@ void ImageComponent::updateVertices()
 	mVertices[1] = { { topLeft.x(),     bottomRight.y() }, { mTopLeftCrop.x(),          1.0f - mBottomRightCrop.y() }, 0 };
 	mVertices[2] = { { bottomRight.x(), topLeft.y()     }, { mBottomRightCrop.x() * px, py   - mTopLeftCrop.y()     }, 0 };
 	mVertices[3] = { { bottomRight.x(), bottomRight.y() }, { mBottomRightCrop.x() * px, 1.0f - mBottomRightCrop.y() }, 0 };
+
+	if(mFrameCount > 0)
+	{
+		// BTV9: só o quadro atual da folha (a coordenada v cresce de baixo para cima)
+		const float cw = 1.0f / mFrameCols, ch = 1.0f / mFrameRows;
+		const float u0 = (mFrame % mFrameCols) * cw, v0 = 1.0f - (mFrame / mFrameCols) * ch;
+		mVertices[0].tex = Vector2f(u0,      v0);
+		mVertices[1].tex = Vector2f(u0,      v0 - ch);
+		mVertices[2].tex = Vector2f(u0 + cw, v0);
+		mVertices[3].tex = Vector2f(u0 + cw, v0 - ch);
+	}
 
 	updateColors();
 
@@ -494,6 +536,18 @@ void ImageComponent::applyTheme(const std::shared_ptr<ThemeData>& theme, const s
 			setMaxSize(elem->get<Vector2f>("maxSize") * scale);
 		else if(elem->has("minSize"))
 			setMinSize(elem->get<Vector2f>("minSize") * scale);
+	}
+
+	if(elem->has("frameGrid") && elem->has("frameCount"))
+	{
+		const Vector2f grade = elem->get<Vector2f>("frameGrid");
+		mFrameCols = std::max(1, (int)(grade.x() + 0.5f));
+		mFrameRows = std::max(1, (int)(grade.y() + 0.5f));
+		mFrameCount = std::min((int)(elem->get<float>("frameCount") + 0.5f), mFrameCols * mFrameRows);
+		mFrameRate = elem->has("frameRate") ? elem->get<float>("frameRate") : 0.0f;
+		mFrameIdle = elem->has("frameIdle") ? std::min((int)(elem->get<float>("frameIdle") + 0.5f), mFrameCols * mFrameRows - 1) : -1;
+		mFrame = (!mFramePlaying && mFrameIdle >= 0) ? mFrameIdle : 0;
+		mFrameTime = 0;
 	}
 
 	if(elem->has("default"))

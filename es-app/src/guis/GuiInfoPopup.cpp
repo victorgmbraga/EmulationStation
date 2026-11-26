@@ -15,7 +15,7 @@ GuiInfoPopup::GuiInfoPopup(Window* window, std::string message, int duration, in
 	std::shared_ptr<TextComponent> s = std::make_shared<TextComponent>(mWindow,
 		"",
 		Font::get(FONT_SIZE_MINI),
-		0x444444FF,
+		0xBCBEBCFF,
 		ALIGN_CENTER);
 
 	// we do this to force the text container to resize and return an actual expected popup size

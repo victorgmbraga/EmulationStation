@@ -68,7 +68,6 @@ void Settings::setDefaults()
 	mBoolMap["SplashScreen"] = true;
 	mStringMap["StartupSystem"] = "";
 	mBoolMap["DisableKidStartMenu"] = true;
-	mBoolMap["DisableKioskStartMenu"] = false;
 
 	mBoolMap["VSync"] = true;
 
@@ -99,11 +98,11 @@ void Settings::setDefaults()
 		mIntMap["MaxVRAM"] = 100;
 	#endif
 
-	mStringMap["TransitionStyle"] = "fade";
-	mStringMap["ThemeSet"] = "";
+	mStringMap["TransitionStyle"] = "instant";
+	mStringMap["ThemeSet"] = "minui";
 	mStringMap["ScreenSaverBehavior"] = "dim";
 	mStringMap["Scraper"] = "TheGamesDB";
-	mStringMap["GamelistViewStyle"] = "automatic";
+	mStringMap["GamelistViewStyle"] = "basic";
 	mStringMap["SaveGamelistsMode"] = "on exit";
 
 	mBoolMap["ScreenSaverControls"] = true;
@@ -180,6 +179,7 @@ void Settings::setDefaults()
 	mIntMap["WindowHeight"]  = 0;
 	mIntMap["ScreenWidth"]   = 0;
 	mIntMap["ScreenHeight"]  = 0;
+	mIntMap["PixelHeight"]   = 360; // BTV9: 720p / 2; 0 desliga o modo pixel
 	mIntMap["ScreenOffsetX"] = 0;
 	mIntMap["ScreenOffsetY"] = 0;
 	mIntMap["ScreenRotate"]  = 0;
@@ -191,6 +191,8 @@ void Settings::setDefaults()
 	//No spaces!  Order is important!
 	//"The A Squad" given [a,an,the] will sort as "A Squad", but given [the,a,an] will sort as "Squad"
 	mStringMap["LeadingArticles"] = "a,an,the";
+
+	applyFixed();
 }
 
 template <typename K, typename V>
@@ -289,6 +291,22 @@ void Settings::loadFile()
 	}
 
 	processBackwardCompatibility();
+	applyFixed();
+}
+
+// BTV9: estas opções não aparecem mais nos menus e valem sempre, mesmo se o es_settings.cfg disser outra coisa
+void Settings::applyFixed()
+{
+	mStringMap["UIMode"]              = "Full";
+	mStringMap["ScreenSaverBehavior"] = "dim";
+	mIntMap["SystemSleepTime"]        = 0;
+	mBoolMap["MoveCarousel"]          = false;
+	mBoolMap["QuickSystemSelect"]     = false;
+	mBoolMap["ShowHelpPrompts"]       = true;
+	mStringMap["PowerSaverMode"]      = "disabled";
+	mStringMap["AudioCard"]           = "default";
+	mStringMap["AudioDevice"]         = "Master";
+	mBoolMap["EnableSounds"]          = false;
 }
 
 

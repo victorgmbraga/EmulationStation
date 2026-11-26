@@ -22,7 +22,6 @@ public:
 
 private:
 	void openGamelistFilter();
-	bool launchSystemScreenSaver();
 	void openMetaDataEd();
 	void startEditMode();
 	void recreateCollection();

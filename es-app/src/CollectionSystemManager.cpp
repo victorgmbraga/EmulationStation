@@ -650,10 +650,6 @@ void CollectionSystemManager::recreateCollection(SystemData* sysData)
 	rootFolder->sort(getSortTypeFromString(colSysData->decl.defaultSort));
 	ViewController::get()->onFileChanged(systemViewToUpdate->getRootFolder(), FILE_SORTED);
 
-	// Workaround to force video to play
-	FileData* cursor = ViewController::get()->getGameListView(systemViewToUpdate)->getCursor();
-	ViewController::get()->getGameListView(systemViewToUpdate)->setCursor(cursor, true);
-
 
 }
 
@@ -685,9 +681,6 @@ void CollectionSystemManager::updateCollectionFolderMetadata(SystemData* sys)
 	std::string releasedate = "N/A";
 	std::string developer = "None";
 	std::string genre = "None";
-	std::string video = "";
-	std::string thumbnail = "";
-	std::string image = "";
 
 	std::unordered_map<std::string, FileData*> games = rootFolder->getChildrenByFilename();
 
@@ -727,12 +720,6 @@ void CollectionSystemManager::updateCollectionFolderMetadata(SystemData* sys)
 
 		desc = "This collection contains " + std::to_string(games_counter) + " game"
 				+ (games_counter == 1 ? "" : "s") + ", including " + games_list;
-
-		FileData* randomGame = sys->getRandomGame();
-
-		video = randomGame->getVideoPath();
-		thumbnail = randomGame->getThumbnailPath();
-		image = randomGame->getImagePath();
 	}
 
 
@@ -742,9 +729,6 @@ void CollectionSystemManager::updateCollectionFolderMetadata(SystemData* sys)
 	rootFolder->metadata.set("genre", genre);
 	rootFolder->metadata.set("releasedate", releasedate);
 	rootFolder->metadata.set("developer", developer);
-	rootFolder->metadata.set("video", video);
-	rootFolder->metadata.set("thumbnail", thumbnail);
-	rootFolder->metadata.set("image", image);
 }
 
 void CollectionSystemManager::initCustomCollectionSystems()

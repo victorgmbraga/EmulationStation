@@ -27,14 +27,8 @@ int PowerSaver::getTimeout()
 
 void PowerSaver::loadWakeupTime()
 {
-	// TODO : Move this to Screensaver Class
-	std::string behaviour = Settings::getInstance()->getString("ScreenSaverBehavior");
-	if (behaviour == "random video")
-		mWakeupTimeout = Settings::getInstance()->getInt("ScreenSaverSwapVideoTimeout") - getMode();
-	else if (behaviour == "slideshow")
-		mWakeupTimeout = Settings::getInstance()->getInt("ScreenSaverSwapMediaTimeout") - getMode();
-	else // Dim and Blank
-		mWakeupTimeout = -1;
+	// BTV9: só existem proteções de tela estáticas (escurecer/preta)
+	mWakeupTimeout = -1;
 }
 
 void PowerSaver::updateTimeouts()
